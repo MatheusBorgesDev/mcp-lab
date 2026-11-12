@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { getRequestListener } from '@hono/node-server'
-import type { Plugin } from 'vite'
+import { loadEnv, type Plugin } from 'vite'
 import { resolveApiRoute, type Rewrite } from './api-routes.js'
 
 type WebHandler = { fetch: (request: Request) => Response | Promise<Response> }
@@ -32,6 +32,12 @@ export function vercelApiDev(): Plugin {
     apply: 'serve',
     configureServer(server) {
       const root = server.config.root
+
+      // Like Vercel: server-side variables from .env files (e.g. DATABASE_URL in .env.local) reach the
+      // functions through process.env. Variables already set in the shell win.
+      for (const [key, value] of Object.entries(loadEnv(server.config.mode, root, ''))) {
+        process.env[key] ??= value
+      }
 
       server.middlewares.use((req, res, next) => {
         const pathname = new URL(req.url ?? '/', 'http://localhost').pathname

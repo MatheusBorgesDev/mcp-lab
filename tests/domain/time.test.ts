@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addDays, formatZoned, toZoned, zonedToInstant } from '../../server/domain/time.js'
+import { addDays, formatZoned, isCalendarDate, toZoned, zonedToInstant } from '../../server/domain/time.js'
 
 const SAO_PAULO = 'America/Sao_Paulo'
 
@@ -46,5 +46,19 @@ describe('addDays: calendar arithmetic on YYYY-MM-DD', () => {
   it('rolls over months and years', () => {
     expect(addDays('2030-12-31', 1)).toBe('2031-01-01')
     expect(addDays('2030-03-01', -1)).toBe('2030-02-28')
+  })
+})
+
+describe('isCalendarDate: a well-formed YYYY-MM-DD that exists', () => {
+  it.each([
+    ['2030-01-07', true],
+    ['2028-02-29', true],
+    ['2030-02-29', false],
+    ['2030-13-01', false],
+    ['07/01/2030', false],
+    ['2030-1-7', false],
+    ['', false],
+  ])('%j -> %s', (date, expected) => {
+    expect(isCalendarDate(date)).toBe(expected)
   })
 })

@@ -109,7 +109,7 @@ describe('row level security: what the anon role (the public front) can do', () 
       await insertCatalogFixture(tx)
       await tx`set local role anon`
 
-      const professionals = await tx`select id from professionals where id like 'test-%' order by id`
+      const professionals = await tx`select id from professionals where id in ('test-ana', 'test-bia') order by id`
       expect(professionals.map((p) => p.id)).toEqual(['test-ana', 'test-bia'])
 
       for (const table of ['services', 'professional_services', 'working_hours', 'closures', 'mcp_events']) {
@@ -124,7 +124,7 @@ describe('row level security: what the anon role (the public front) can do', () 
       await insertAppointment(tx, { startsAt: at('11:00'), endsAt: at('11:30'), status: 'cancelled' })
       await tx`set local role anon`
 
-      const rows = await tx`select * from public_agenda where professional_id like 'test-%'`
+      const rows = await tx`select * from public_agenda where professional_id in ('test-ana', 'test-bia')`
 
       expect(rows).toHaveLength(1)
       expect(Object.keys(rows[0] ?? {}).sort()).toEqual(

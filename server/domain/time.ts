@@ -96,3 +96,12 @@ export function addDays(date: LocalDate, days: number): LocalDate {
 export function addMinutes(instant: Date, minutes: number): Date {
   return new Date(instant.getTime() + minutes * MINUTE_MS)
 }
+
+/** True for a well-formed YYYY-MM-DD that exists in the calendar. Never throws. */
+export function isCalendarDate(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  if (!match) return false
+  const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])]
+  const date = new Date(Date.UTC(year, month - 1, day))
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+}

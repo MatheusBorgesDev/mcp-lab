@@ -180,7 +180,9 @@ create view public_agenda as
 
 Resultado com `isError: true` e conteúdo estruturado `{ code, message, suggestions? }`. Códigos:
 
-`INVALID_INPUT`, `SERVICE_NOT_FOUND`, `PROFESSIONAL_NOT_FOUND`, `PROFESSIONAL_DOES_NOT_OFFER_SERVICE`, `OUTSIDE_WORKING_HOURS`, `SLOT_UNAVAILABLE` (com sugestões), `TOO_SOON`, `TOO_FAR_AHEAD`, `CHANGE_WINDOW_PASSED`, `BOOKING_LIMIT_REACHED`, `DAILY_CAPACITY_REACHED`, `RATE_LIMITED`, `APPOINTMENT_NOT_FOUND`.
+`INVALID_INPUT`, `SERVICE_NOT_FOUND`, `PROFESSIONAL_NOT_FOUND`, `PROFESSIONAL_DOES_NOT_OFFER_SERVICE`, `OUTSIDE_WORKING_HOURS`, `SLOT_UNAVAILABLE` (com sugestões), `TOO_SOON`, `TOO_FAR_AHEAD`, `CHANGE_WINDOW_PASSED`, `BOOKING_LIMIT_REACHED`, `DAILY_CAPACITY_REACHED`, `RATE_LIMITED`, `APPOINTMENT_NOT_FOUND`, `INTERNAL_ERROR` (falha inesperada, como banco fora do ar; detalhe só no log do servidor).
+
+`OUTSIDE_WORKING_HOURS` também traz sugestões. A validação de entrada é feita pela própria tool com o mesmo schema zod anunciado em `tools/list`, para que `INVALID_INPUT` volte estruturado (quando o SDK valida sozinho, o erro volta só como texto).
 
 As mensagens nunca expõem detalhes internos (SQL, stack trace).
 

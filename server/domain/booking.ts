@@ -183,7 +183,7 @@ export function suggestStarts(schedule: Schedule, query: SuggestionQuery): Sugge
     }
     for (const [time, free] of freeAt) {
       const professional = pickProfessional(schedule, free, date, rules, excludeAppointmentId)
-      options.push({ professionalId: professional.id, startsAt: new Date(time) })
+      options.push({ professionalId: professional.id, professionalName: professional.name, startsAt: new Date(time) })
     }
   }
 

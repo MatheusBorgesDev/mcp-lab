@@ -12,8 +12,9 @@ export type ErrorCode =
   | 'DAILY_CAPACITY_REACHED'
   | 'RATE_LIMITED'
   | 'APPOINTMENT_NOT_FOUND'
+  | 'INTERNAL_ERROR'
 
-export type Suggestion = { professionalId: string; startsAt: Date }
+export type Suggestion = { professionalId: string; professionalName: string; startsAt: Date }
 
 /** Messages are read by the visitor's AI, so they are in English and never expose internals. */
 export type DomainError = { code: ErrorCode; message: string; suggestions?: Suggestion[] }
