@@ -18,6 +18,16 @@ import { advertise, inputs } from './schemas.js'
 export type ToolDeps = { shop: Barbershop }
 
 /**
+ * The log line for an unexpected error: stack (type and message first) and code. Not the error's other
+ * properties, which may hold secrets: Node's URL errors, for one, carry the whole connection string.
+ */
+function describeError(error: unknown): string {
+  if (!(error instanceof Error)) return `non-Error value thrown (${typeof error})`
+  const code = (error as { code?: unknown }).code
+  return `${error.stack ?? `${error.name}: ${error.message}`}${typeof code === 'string' ? ` [code ${code}]` : ''}`
+}
+
+/**
  * Validates the arguments with `schema`, then runs the tool. Unexpected errors (database down, a bug) are
  * logged on the server and reach the AI only as INTERNAL_ERROR, without internal details.
  */
@@ -32,7 +42,7 @@ function tool<S extends z.ZodType>(
       if (!parsed.success) return invalidInput(parsed.error, timeZone)
       return await run(parsed.data, ctx)
     } catch (error) {
-      console.error('[mcp] tool failed', error)
+      console.error('[mcp] tool failed', describeError(error))
       return failure({ code: 'INTERNAL_ERROR', message: 'Something went wrong on our side. Try again shortly.' }, timeZone)
     }
   }
