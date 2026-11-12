@@ -278,7 +278,7 @@ vercel.json
 - [x] Projeto criado (Vite + TS + funções da Vercel) e Supabase configurado
 - [x] Migrations do modelo de dados e RLS
 - [x] Seed com serviços, profissionais e horários
-- [ ] Regras de domínio com testes unitários
+- [x] Regras de domínio com testes unitários
 - [ ] Tools do MCP funcionando localmente
 - [ ] Teste de concorrência passando
 - [ ] Deploy na Vercel e teste com Claude e ChatGPT

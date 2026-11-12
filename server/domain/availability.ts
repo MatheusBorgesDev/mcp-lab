@@ -66,6 +66,47 @@ export function checkDateWindow(date: LocalDate, now: Date, rules: ShopRules = S
   return ok(undefined)
 }
 
+export type SlotStatus =
+  | { kind: 'free' }
+  | { kind: 'outside_working_hours' }
+  | { kind: 'closed'; reason: string | null }
+  | { kind: 'busy' }
+
+/** Whether one professional can do the service at `start`, and if not, why. Ignores notice and date window. */
+export function slotStatus(
+  schedule: Schedule,
+  professionalId: string,
+  service: Service,
+  start: Date,
+  rules: ShopRules = SHOP_RULES,
+  excludeAppointmentId?: string,
+): SlotStatus {
+  const { weekday, minutes } = toZoned(start, rules.timeZone)
+  const fits = schedule.workingHours.some(
+    (w) =>
+      w.professionalId === professionalId &&
+      w.weekday === weekday &&
+      w.startMin <= minutes &&
+      minutes + service.durationMin <= w.endMin,
+  )
+  if (!fits) return { kind: 'outside_working_hours' }
+
+  const end = addMinutes(start, service.durationMin)
+  const closure = schedule.closures.find(
+    (c) =>
+      (c.professionalId === null || c.professionalId === professionalId) && overlaps(start, end, c.startsAt, c.endsAt),
+  )
+  if (closure) return { kind: 'closed', reason: closure.reason }
+
+  const taken = schedule.appointments.some(
+    (a) =>
+      a.professionalId === professionalId &&
+      a.appointmentId !== excludeAppointmentId &&
+      overlaps(start, end, a.startsAt, a.endsAt),
+  )
+  return taken ? { kind: 'busy' } : { kind: 'free' }
+}
+
 /** Free start times of one professional for a service on a date, honouring every time rule. */
 export function freeStarts(
   schedule: Schedule,
@@ -78,12 +119,6 @@ export function freeStarts(
 ): Date[] {
   const weekday = weekdayOf(date)
   const earliest = addMinutes(now, rules.minAdvanceMinutes)
-  const blocked = [
-    ...schedule.closures.filter((c) => c.professionalId === null || c.professionalId === professionalId),
-    ...schedule.appointments.filter(
-      (a) => a.professionalId === professionalId && a.appointmentId !== excludeAppointmentId,
-    ),
-  ]
   const intervals = schedule.workingHours
     .filter((w) => w.professionalId === professionalId && w.weekday === weekday)
     .toSorted((a, b) => a.startMin - b.startMin)
@@ -94,9 +129,9 @@ export function freeStarts(
     for (let minute = first; minute + service.durationMin <= interval.endMin; minute += rules.slotMinutes) {
       const start = zonedToInstant(date, minute, rules.timeZone)
       if (start < earliest) continue
-      const end = addMinutes(start, service.durationMin)
-      if (blocked.some((b) => overlaps(start, end, b.startsAt, b.endsAt))) continue
-      starts.push(start)
+      if (slotStatus(schedule, professionalId, service, start, rules, excludeAppointmentId).kind === 'free') {
+        starts.push(start)
+      }
     }
   }
   return starts
