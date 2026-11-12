@@ -281,7 +281,7 @@ vercel.json
 - [x] Migrations do modelo de dados e RLS
 - [x] Seed com serviços, profissionais e horários
 - [x] Regras de domínio com testes unitários
-- [ ] Tools do MCP funcionando localmente
+- [x] Tools do MCP funcionando localmente
 - [x] Teste de concorrência passando
 - [ ] Deploy na Vercel e teste com Claude e ChatGPT
 

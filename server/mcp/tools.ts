@@ -1,4 +1,5 @@
 import type { CallToolResult, McpServer, ServerContext } from '@modelcontextprotocol/server'
+import { getPublicOrigin } from 'mcp-handler'
 import type { z } from 'zod'
 import type { Barbershop } from '../app/barbershop.js'
 import { formatZoned } from '../domain/time.js'
@@ -173,6 +174,103 @@ export function registerReadTools(server: McpServer, { shop }: ToolDeps): void {
         `${appointment.service.name} with ${appointment.professional.name}, ${appointment.start} ` +
           `(${appointment.status}).`,
         { appointment },
+      )
+    }),
+  )
+}
+
+/**
+ * Link to the public page with the appointment highlighted. In production, Vercel's own variable gives the
+ * stable domain; elsewhere (pnpm dev, tests) the origin of the request is used.
+ */
+function watchUrl(appointmentId: string, ctx: ServerContext): string {
+  const productionHost = process.env.VERCEL_PROJECT_PRODUCTION_URL
+  const request = ctx.http?.req
+  const origin = productionHost ? `https://${productionHost}` : request ? getPublicOrigin(request) : 'http://localhost:5173'
+  return `${origin}/?appointment=${encodeURIComponent(appointmentId)}`
+}
+
+export function registerWriteTools(server: McpServer, { shop }: ToolDeps): void {
+  const { timeZone } = shop.rules
+
+  server.registerTool(
+    'book_appointment',
+    {
+      title: 'Book appointment',
+      description:
+        'Books a service at a start time from check_availability. Without professional_id the shop picks a free ' +
+        'professional who does the service. Returns the booking code: show it to the user and ask them to keep it.',
+      inputSchema: advertise(inputs.book_appointment),
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    },
+    tool(inputs.book_appointment, timeZone, async (input, ctx) => {
+      const result = await shop.book({
+        serviceId: input.service_id,
+        start: new Date(input.start),
+        ...(input.professional_id === undefined ? {} : { professionalId: input.professional_id }),
+        ...(input.client_name === undefined ? {} : { clientName: input.client_name }),
+      })
+      if (!result.ok) return failure(result.error, timeZone)
+
+      const { code, appointment } = result.value
+      const view = appointmentView(appointment, timeZone)
+      const watch_url = watchUrl(appointment.id, ctx)
+      return success(
+        `Booked ${view.service.name} with ${view.professional.name} at ${view.start}. ` +
+          `Booking code: ${code} (the user must keep it to view, reschedule or cancel). Live agenda: ${watch_url}`,
+        { code, appointment: view, watch_url },
+      )
+    }),
+  )
+
+  server.registerTool(
+    'reschedule_appointment',
+    {
+      title: 'Reschedule appointment',
+      description:
+        'Moves an appointment to a new start time, identified by its booking code. Keeps the professional unless ' +
+        'professional_id is given. Allowed up to 2 hours before the current start.',
+      inputSchema: advertise(inputs.reschedule_appointment),
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    },
+    tool(inputs.reschedule_appointment, timeZone, async (input, ctx) => {
+      const result = await shop.reschedule({
+        code: input.code,
+        newStart: new Date(input.new_start),
+        ...(input.professional_id === undefined ? {} : { professionalId: input.professional_id }),
+      })
+      if (!result.ok) return failure(result.error, timeZone)
+
+      const view = appointmentView(result.value, timeZone)
+      const watch_url = watchUrl(result.value.id, ctx)
+      return success(
+        `Rescheduled: ${view.service.name} with ${view.professional.name} at ${view.start}. The booking code stays the same.`,
+        { appointment: view, watch_url },
+      )
+    }),
+  )
+
+  server.registerTool(
+    'cancel_appointment',
+    {
+      title: 'Cancel appointment',
+      description:
+        'Cancels an appointment identified by its booking code, freeing the time. Allowed up to 2 hours before ' +
+        'the start. Cancelling twice is harmless.',
+      inputSchema: advertise(inputs.cancel_appointment),
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+    },
+    tool(inputs.cancel_appointment, timeZone, async (input) => {
+      const result = await shop.cancel(input.code)
+      if (!result.ok) return failure(result.error, timeZone)
+
+      const { appointment, alreadyCancelled } = result.value
+      const view = appointmentView(appointment, timeZone)
+      return success(
+        alreadyCancelled
+          ? `This appointment was already cancelled (${view.service.name}, ${view.start}).`
+          : `Cancelled ${view.service.name} with ${view.professional.name} at ${view.start}. The time is free again.`,
+        { appointment: view, already_cancelled: alreadyCancelled },
       )
     }),
   )

@@ -1,6 +1,6 @@
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client'
 import postgres from 'postgres'
-import { afterAll, afterEach, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, describe, expect, it, vi } from 'vitest'
 import { createBarbershop } from '../../server/app/barbershop.js'
 import { createMcpRequestHandler } from '../../server/mcp/server.js'
 import { connectLocalDb } from './helpers.js'
@@ -23,7 +23,7 @@ async function connect(era: 'modern' | 'legacy' = 'modern', to = handler): Promi
     { name: 'test-client', version: '1.0.0' },
     era === 'modern' ? { versionNegotiation: { mode: { pin: '2026-07-28' } } } : {},
   )
-  const transport = new StreamableHTTPClientTransport(new URL('http://localhost:5173/mcp'), {
+  const transport = new StreamableHTTPClientTransport(new URL('http://barber.test/mcp'), {
     fetch: (url, init) => to(new Request(url, init)),
   })
   await client.connect(transport)
@@ -153,6 +153,120 @@ describe('MCP server: failures', () => {
       console.error = originalError
       await unreachable.end()
     }
+  })
+})
+
+describe('MCP server: write tools', () => {
+  afterEach(() => vi.unstubAllEnvs())
+
+  // Monday 2030-01-07 at 09:00 only Lucas works (Diego starts at 11:00), so the shop picks him.
+  const NINE = '2030-01-07T09:00:00-03:00'
+
+  async function book(client: Client, args: Record<string, unknown> = {}) {
+    const booked = await call(client, 'book_appointment', { service_id: 'corte-masculino', start: NINE, ...args })
+    if (booked.isError) throw new Error(`booking failed: ${JSON.stringify(booked.data)}`)
+    return booked.data as { code: string; appointment: Structured & { id: string }; watch_url: string }
+  }
+
+  it('advertises booking and rescheduling as writes and cancelling as destructive', async () => {
+    const { tools } = await (await connect()).listTools()
+    const hints = Object.fromEntries(tools.map((t) => [t.name, t.annotations]))
+
+    expect(hints.book_appointment).toMatchObject({ readOnlyHint: false, destructiveHint: false })
+    expect(hints.reschedule_appointment).toMatchObject({ readOnlyHint: false, destructiveHint: false })
+    expect(hints.cancel_appointment).toMatchObject({ readOnlyHint: false, destructiveHint: true })
+  })
+
+  it('books a time and returns the code, the appointment and a link to watch it live', async () => {
+    const client = await connect()
+
+    const { code, appointment, watch_url } = await book(client)
+
+    expect(code).toMatch(/^[0-9A-Z]{5}-[0-9A-Z]{5}$/)
+    expect(appointment).toMatchObject({
+      status: 'confirmed',
+      start: NINE,
+      end: '2030-01-07T09:30:00-03:00',
+      professional: { id: 'lucas', name: 'Lucas' },
+      service: { id: 'corte-masculino', price: 'R$ 50,00' },
+    })
+    expect(watch_url).toBe(`http://barber.test/?appointment=${appointment.id}`)
+    expect(await call(client, 'get_appointment', { code })).toMatchObject({
+      isError: false,
+      data: { appointment: { id: appointment.id } },
+    })
+  })
+
+  it('links to the production site when Vercel provides its URL', async () => {
+    vi.stubEnv('VERCEL_PROJECT_PRODUCTION_URL', 'mcp-barber-shop.vercel.app')
+
+    const { appointment, watch_url } = await book(await connect())
+
+    expect(watch_url).toBe(`https://mcp-barber-shop.vercel.app/?appointment=${appointment.id}`)
+  })
+
+  it('never echoes the client name back', async () => {
+    const client = await connect()
+    const booked = await client.callTool({
+      name: 'book_appointment',
+      arguments: { service_id: 'corte-masculino', start: NINE, client_name: 'Maria Privada' },
+    })
+
+    expect(booked.isError).toBeFalsy()
+    expect(JSON.stringify(booked)).not.toContain('Maria Privada')
+  })
+
+  it('refuses a taken time with suggestions in shop time', async () => {
+    const client = await connect()
+    await book(client)
+
+    const { isError, data } = await call(client, 'book_appointment', {
+      service_id: 'corte-masculino',
+      start: NINE,
+      professional_id: 'lucas',
+    })
+
+    expect(isError).toBe(true)
+    expect(data).toMatchObject({ code: 'SLOT_UNAVAILABLE' })
+    // Lucas starts at 09:00 and 09:00-09:30 is taken: the nearest free starts are all after it.
+    expect(data.suggestions).toEqual([
+      { start: '2030-01-07T09:30:00-03:00', professional_id: 'lucas', professional_name: 'Lucas' },
+      { start: '2030-01-07T09:45:00-03:00', professional_id: 'lucas', professional_name: 'Lucas' },
+      { start: '2030-01-07T10:00:00-03:00', professional_id: 'lucas', professional_name: 'Lucas' },
+    ])
+  })
+
+  it('reschedules with the code, keeping the professional', async () => {
+    const client = await connect()
+    const { code } = await book(client)
+
+    const { isError, data } = await call(client, 'reschedule_appointment', {
+      code,
+      new_start: '2030-01-07T10:00:00-03:00',
+    })
+
+    expect(isError).toBe(false)
+    expect(data.appointment).toMatchObject({ start: '2030-01-07T10:00:00-03:00', professional: { id: 'lucas' } })
+  })
+
+  it('cancels with the code and frees the time', async () => {
+    const client = await connect()
+    const { code } = await book(client)
+
+    const cancelled = await call(client, 'cancel_appointment', { code })
+
+    expect(cancelled).toMatchObject({ isError: false, data: { appointment: { status: 'cancelled' }, already_cancelled: false } })
+    await book(client)
+  })
+
+  it('rejects a start without a UTC offset as INVALID_INPUT', async () => {
+    const { isError, data } = await call(await connect(), 'book_appointment', {
+      service_id: 'corte-masculino',
+      start: '2030-01-07T09:00:00',
+    })
+
+    expect(isError).toBe(true)
+    expect(data).toMatchObject({ code: 'INVALID_INPUT' })
   })
 })
 
