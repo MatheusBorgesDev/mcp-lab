@@ -38,3 +38,9 @@ Projeto de portfólio: servidor MCP de agendamento de uma barbearia fictícia, a
 - `pnpm typecheck`: servidor e front.
 - `pnpm lint`: oxlint (não imprime nada quando está tudo certo).
 - `pnpm build`: typecheck + build do front.
+
+## Produção
+
+- https://mcp-barber-shop.vercel.app (MCP em `/mcp`). As funções rodam em São Paulo (`regions: ["gru1"]` no `vercel.json`), ao lado do Supabase em `sa-east-1`. Push na `main` gera deploy de produção; variável alterada no painel da Vercel só vale depois de um Redeploy.
+- Banco na nuvem pela CLI (depois de `pnpm exec supabase login`, uma vez por máquina; não pede a senha do banco): `pnpm exec supabase db push --remote --dry-run` para conferir e `pnpm exec supabase db push --remote --yes` para aplicar (`--include-seed` aplica o seed). SQL avulso: `pnpm exec supabase db query "..."` no banco local, ou com `--remote --read-only` na nuvem.
+- `DATABASE_URL` de produção: Transaction pooler do Supabase (porta 6543), com a senha codificada por `encodeURIComponent`. Um símbolo cru na senha quebra a URL; o servidor recusa URL malformada com erro claro, sem mostrar o valor.
