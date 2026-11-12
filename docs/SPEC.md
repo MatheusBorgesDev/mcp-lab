@@ -153,6 +153,7 @@ create view public_agenda as
 - `appointments`: **nenhuma** política para `anon`. Só o servidor acessa, pela sua conexão Postgres privilegiada (`DATABASE_URL`).
 - `public_agenda` roda com privilégios do dono para expor apenas as colunas públicas. O linter do Supabase alerta sobre esse tipo de view; aqui é intencional e deve ser documentado no README.
 - Nenhuma escrita parte do front.
+- Privilégios: tudo revogado de `anon` e `authenticated` (inclusive, por default privileges, para tabelas futuras); `anon` recebe só `SELECT` nas tabelas e na view listadas acima. `authenticated` não recebe nada, porque o projeto não tem login. Os testes de `tests/db` verificam essas regras e reprovam se forem quebradas.
 
 ## 5. Servidor MCP
 
@@ -274,8 +275,8 @@ vercel.json
 ## 12. Fases
 
 ### Fase 1: Núcleo
-- [ ] Projeto criado (Vite + TS + funções da Vercel) e Supabase configurado
-- [ ] Migrations do modelo de dados e RLS
+- [x] Projeto criado (Vite + TS + funções da Vercel) e Supabase configurado
+- [x] Migrations do modelo de dados e RLS
 - [ ] Seed com serviços, profissionais e horários
 - [ ] Regras de domínio com testes unitários
 - [ ] Tools do MCP funcionando localmente

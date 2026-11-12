@@ -6,7 +6,17 @@ import { vercelApiDev } from './dev/vercel-api-plugin.js'
 export default defineConfig({
   plugins: [react(), vercelApiDev()],
   test: {
-    include: ['tests/**/*.test.ts'],
     environment: 'node',
+    projects: [
+      {
+        extends: true,
+        test: { name: 'unit', include: ['tests/**/*.test.ts'], exclude: ['tests/db/**'] },
+      },
+      {
+        // Needs the local Supabase running (pnpm db:start). One file at a time: files share the database.
+        extends: true,
+        test: { name: 'db', include: ['tests/db/**/*.test.ts'], fileParallelism: false },
+      },
+    ],
   },
 })
