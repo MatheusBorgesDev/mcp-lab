@@ -1,0 +1,24 @@
+{
+  // Server side: /api (Vercel Functions), /server, /tests, /dev and the Vite config.
+  // Self-contained on purpose: Vercel compiles /api by extending this file and does not
+  // follow project references or path aliases. The front has its own src/tsconfig.json.
+  "compilerOptions": {
+    "target": "es2023",
+    "lib": ["ES2023"],
+    "module": "nodenext",
+    "types": ["node"],
+    "skipLibCheck": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "erasableSyntaxOnly": true
+  },
+  "include": ["api", "server", "tests", "dev", "vite.config.ts"]
+}

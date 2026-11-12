@@ -22,9 +22,15 @@ Projeto de portfólio: servidor MCP de agendamento de uma barbearia fictícia, a
 - Nenhum segredo no front ou no repositório: apenas variáveis de ambiente.
 - Nada que identifique o visitante (IP, nome, código de reserva completo) aparece em telas públicas ou no inspector.
 - Idioma: conteúdo da barbearia e página em pt-BR; descrições das tools, `instructions` e mensagens de erro em inglês; identificadores de código em inglês.
-- Código do servidor (`/api`, `/server`) usa imports relativos: as funções da Vercel não aceitam path aliases do tsconfig.
-- Gerenciador de pacotes: pnpm.
+- Código do servidor (`/api`, `/server`, `/tests`, `/dev`) usa imports relativos com extensão `.js` (resolução NodeNext; Vite e Vitest resolvem para o `.ts`). As funções da Vercel não aceitam path aliases do tsconfig.
+- Toda função em `/api` exporta a assinatura Web: `export default { fetch(request) { ... } }`.
+- Dois tsconfig independentes: `tsconfig.json` (servidor; a Vercel compila `/api` estendendo este arquivo) e `src/tsconfig.json` (front). Sem project references.
+- Gerenciador de pacotes: pnpm. Node 22 (`engines` no package.json; `.tool-versions` para quem usa asdf).
 
 ## Comandos
 
-(preencher conforme o projeto for criado)
+- `pnpm dev`: página e funções de `/api` na mesma porta (5173). O plugin `dev/vercel-api-plugin.ts` serve `/api/<nome>` a partir de `api/<nome>.ts` e aplica os rewrites exatos do `vercel.json`, como a Vercel.
+- `pnpm test` / `pnpm test:watch`: Vitest (testes em `tests/**/*.test.ts`).
+- `pnpm typecheck`: servidor e front.
+- `pnpm lint`: oxlint (não imprime nada quando está tudo certo).
+- `pnpm build`: typecheck + build do front.

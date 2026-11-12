@@ -17,6 +17,7 @@ supabase/.branches/
 # Claude Code: estado local de cada sessão
 .claude/context/
 .claude/settings.local.json
+.playwright-mcp/
 
 # Sistema e editores
 .DS_Store
