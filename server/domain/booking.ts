@@ -10,6 +10,8 @@ export type BookingPlan = { service: Service; professional: Professional; starts
 
 /** The rules a booking goes through, in order. The inspector shows each one with its result. */
 export type CheckRule =
+  | 'appointment_exists'
+  | 'change_window'
   | 'service_exists'
   | 'professional_exists'
   | 'professional_offers_service'

@@ -1,0 +1,32 @@
+import postgres from 'postgres'
+
+let client: postgres.Sql | undefined
+
+/**
+ * The server's connection, created on first use and reused while the function instance lives.
+ * In production DATABASE_URL points at the Supabase pooler in transaction mode, which does not
+ * support prepared statements.
+ */
+export function getSql(): postgres.Sql {
+  if (!client) {
+    const url = process.env.DATABASE_URL
+    if (!url) throw new Error('DATABASE_URL is not set.')
+    client = postgres(url, { prepare: false, max: 5, idle_timeout: 20, connect_timeout: 10, onnotice: () => {} })
+  }
+  return client
+}
+
+const EXCLUSION_VIOLATION = '23P01'
+const DEADLOCK_DETECTED = '40P01'
+
+/**
+ * True when a competing write made the database refuse this one: it would overlap an active appointment
+ * (exclusion constraint), or it was chosen as the victim of a deadlock between overlapping inserts.
+ * Either way the caller should plan again with fresh data.
+ */
+export function isSlotConflict(error: unknown): boolean {
+  return (
+    error instanceof postgres.PostgresError &&
+    (error.code === EXCLUSION_VIOLATION || error.code === DEADLOCK_DETECTED)
+  )
+}

@@ -13,9 +13,10 @@ export default defineConfig({
         test: { name: 'unit', include: ['tests/**/*.test.ts'], exclude: ['tests/db/**'] },
       },
       {
-        // Needs the local Supabase running (pnpm db:start). One file at a time: files share the database.
+        // Needs the local Supabase running (pnpm db:start). Files may run in parallel: each one either
+        // rolls its transaction back or uses committed rows with its own id prefix (tests/db/helpers.ts).
         extends: true,
-        test: { name: 'db', include: ['tests/db/**/*.test.ts'], fileParallelism: false },
+        test: { name: 'db', include: ['tests/db/**/*.test.ts'] },
       },
     ],
   },

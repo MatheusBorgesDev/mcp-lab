@@ -31,7 +31,7 @@ Projeto de portfólio: servidor MCP de agendamento de uma barbearia fictícia, a
 
 - `pnpm dev`: página e funções de `/api` na mesma porta (5173). O plugin `dev/vercel-api-plugin.ts` serve `/api/<nome>` a partir de `api/<nome>.ts` e aplica os rewrites exatos do `vercel.json`, como a Vercel.
 - `pnpm test` / `pnpm test:watch`: testes unitários (Vitest, projeto `unit`), sem banco.
-- `pnpm test:db`: testes contra o Supabase local (projeto `db`, em `tests/db`). Cada teste roda numa transação desfeita no fim; o helper recusa qualquer banco que não seja local.
+- `pnpm test:db`: testes contra o Supabase local (projeto `db`, em `tests/db`), inclusive o de concorrência. Os arquivos rodam em paralelo: cada teste ou roda numa transação desfeita no fim, ou (quando precisa de várias conexões) grava dados com um prefixo de id só daquele arquivo e apaga no fim. O helper recusa qualquer banco que não seja local.
 - `pnpm db:start` / `db:stop` / `db:status`: Supabase local (precisa do Docker). Studio em http://127.0.0.1:54323.
 - `pnpm db:reset`: recria o banco local aplicando `supabase/migrations` e o `supabase/seed.sql`.
 - `pnpm typecheck`: servidor e front.

@@ -280,7 +280,7 @@ vercel.json
 - [x] Seed com serviços, profissionais e horários
 - [x] Regras de domínio com testes unitários
 - [ ] Tools do MCP funcionando localmente
-- [ ] Teste de concorrência passando
+- [x] Teste de concorrência passando
 - [ ] Deploy na Vercel e teste com Claude e ChatGPT
 
 ### Fase 2: Vitrine
