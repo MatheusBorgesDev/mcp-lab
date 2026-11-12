@@ -277,7 +277,7 @@ vercel.json
 ### Fase 1: Núcleo
 - [x] Projeto criado (Vite + TS + funções da Vercel) e Supabase configurado
 - [x] Migrations do modelo de dados e RLS
-- [ ] Seed com serviços, profissionais e horários
+- [x] Seed com serviços, profissionais e horários
 - [ ] Regras de domínio com testes unitários
 - [ ] Tools do MCP funcionando localmente
 - [ ] Teste de concorrência passando
