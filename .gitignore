@@ -1,0 +1,23 @@
+# Dependências e builds
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Variáveis de ambiente (só o exemplo vai para o git)
+.env
+.env.*
+!.env.example
+
+# Vercel e Supabase locais
+.vercel/
+supabase/.temp/
+supabase/.branches/
+
+# Claude Code: estado local de cada sessão
+.claude/context/
+.claude/settings.local.json
+
+# Sistema e editores
+.DS_Store
+*.log
