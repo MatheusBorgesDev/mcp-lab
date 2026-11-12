@@ -283,7 +283,7 @@ vercel.json
 - [x] Regras de domínio com testes unitários
 - [x] Tools do MCP funcionando localmente
 - [x] Teste de concorrência passando
-- [ ] Deploy na Vercel e teste com Claude e ChatGPT
+- [x] Deploy na Vercel e teste com Claude e ChatGPT
 
 ### Fase 2: Vitrine
 - [ ] Página da barbearia com agenda ao vivo
