@@ -1,6 +1,22 @@
 import postgres from 'postgres'
+import { z } from 'zod'
 
 let client: postgres.Sql | undefined
+
+const postgresUrl = z.url({ protocol: /^postgres(ql)?$/, hostname: /./ })
+
+/**
+ * DATABASE_URL, checked before it reaches the driver: postgres.js silently falls back to localhost:5432
+ * when it finds no host in the string. The error never includes the value, which holds the password.
+ */
+export function readDatabaseUrl(value: string | undefined): string {
+  const url = value?.trim()
+  if (!url) throw new Error('DATABASE_URL is not set.')
+  if (!postgresUrl.safeParse(url).success) {
+    throw new Error('DATABASE_URL is not a valid Postgres URL (expected postgresql://user:password@host:port/database).')
+  }
+  return url
+}
 
 /**
  * The server's connection, created on first use and reused while the function instance lives.
@@ -9,9 +25,7 @@ let client: postgres.Sql | undefined
  */
 export function getSql(): postgres.Sql {
   if (!client) {
-    const url = process.env.DATABASE_URL
-    if (!url) throw new Error('DATABASE_URL is not set.')
-    client = postgres(url, { prepare: false, max: 5, idle_timeout: 20, connect_timeout: 10, onnotice: () => {} })
+    client = postgres(readDatabaseUrl(process.env.DATABASE_URL), { prepare: false, max: 5, idle_timeout: 20, connect_timeout: 10, onnotice: () => {} })
   }
   return client
 }
