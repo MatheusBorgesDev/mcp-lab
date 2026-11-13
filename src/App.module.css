@@ -35,13 +35,6 @@
   align-items: start;
 }
 
-.agenda {
-  border: 1px solid var(--rule);
-  border-radius: 14px;
-  padding: 14px;
-}
-
-.agenda h2,
 .inspector h2 {
   margin: 0;
   font-weight: 700;

@@ -23,3 +23,26 @@ export const RAW = {
     { professional_id: 'bia', weekday: 6, start_time: '10:00:00', end_time: '14:00:00' },
   ],
 }
+
+/** Two barbers on Thursday 2026-11-12: Rafael 09–12 and 13–19, Lucas off on Thursdays. */
+export const AGENDA_RAW = {
+  services: [
+    { id: 'barba', name: 'Barba', description: null, duration_min: 30, price_cents: 4000, active: true },
+    { id: 'corte-e-barba', name: 'Corte + barba', description: null, duration_min: 60, price_cents: 8000, active: true },
+  ],
+  professionals: [
+    { id: 'rafael', name: 'Rafael', bio: null, active: true },
+    { id: 'lucas', name: 'Lucas', bio: null, active: true },
+  ],
+  professionalServices: [
+    { professional_id: 'rafael', service_id: 'barba' },
+    { professional_id: 'rafael', service_id: 'corte-e-barba' },
+    { professional_id: 'lucas', service_id: 'barba' },
+  ],
+  workingHours: [
+    { professional_id: 'rafael', weekday: 4, start_time: '09:00', end_time: '12:00' },
+    { professional_id: 'rafael', weekday: 4, start_time: '13:00', end_time: '19:00' },
+    { professional_id: 'rafael', weekday: 5, start_time: '09:00', end_time: '19:00' },
+    { professional_id: 'lucas', weekday: 5, start_time: '09:00', end_time: '18:00' },
+  ],
+}

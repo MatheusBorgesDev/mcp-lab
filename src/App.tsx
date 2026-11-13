@@ -1,10 +1,19 @@
+import { Agenda } from './agenda/Agenda'
+import type { AgendaSource } from './agenda/load'
 import styles from './App.module.css'
 import { SiteHeader } from './site/SiteHeader'
 import { Menu } from './vitrine/Menu'
 import { ShopFacts } from './vitrine/ShopFacts'
 import { TryWithAI } from './vitrine/TryWithAI'
 
-export default function App() {
+type AppProps = {
+  /** Where the agenda reads from; null when the page has no Supabase settings. */
+  agenda?: AgendaSource | null
+  /** The appointment to show, from the link the AI gives after a booking (`?appointment=<id>`). */
+  targetId?: string | null
+}
+
+export default function App({ agenda = null, targetId = null }: AppProps) {
   return (
     <>
       <a className="skip" href="#conteudo">
@@ -28,9 +37,7 @@ export default function App() {
         </div>
 
         <div className={styles.live}>
-          <section id="agenda" aria-labelledby="agenda-titulo" className={styles.agenda}>
-            <h2 id="agenda-titulo">Agenda</h2>
-          </section>
+          <Agenda source={agenda} targetId={targetId} />
           <section id="inspector" aria-labelledby="inspector-titulo" className={styles.inspector}>
             <h2 id="inspector-titulo">Inspector</h2>
             <p className={styles.sub}>cada chamada MCP, da chegada à resposta</p>

@@ -9,6 +9,7 @@ import '@fontsource/ibm-plex-mono/500.css'
 import '@fontsource/ibm-plex-mono/600.css'
 import './styles/tokens.css'
 import './styles/global.css'
+import { supabaseAgendaSource } from './agenda/load.ts'
 import App from './App.tsx'
 import { loadCatalog } from './data/catalog.ts'
 import { CatalogProvider } from './data/CatalogProvider.tsx'
@@ -26,12 +27,14 @@ if (!supabase && import.meta.env.DEV) {
 // One live connection for the life of the page.
 const live = createLiveConnection(supabase)
 const loadShopCatalog = supabase ? () => loadCatalog(supabase) : null
+const agenda = supabase ? supabaseAgendaSource(supabase) : null
+const targetId = new URLSearchParams(window.location.search).get('appointment')
 
 createRoot(root).render(
   <StrictMode>
     <LiveProvider connection={live}>
       <CatalogProvider load={loadShopCatalog}>
-        <App />
+        <App agenda={agenda} targetId={targetId} />
       </CatalogProvider>
     </LiveProvider>
   </StrictMode>,
