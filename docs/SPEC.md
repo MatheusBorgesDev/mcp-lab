@@ -299,9 +299,9 @@ vercel.json
 - [x] Deploy na Vercel e teste com Claude e ChatGPT
 
 ### Fase 2: Vitrine
-- [ ] Página da barbearia com agenda ao vivo
-- [ ] Registro de eventos e inspector ao vivo
-- [ ] Seção "Teste com a sua IA"
+- [x] Página da barbearia com agenda ao vivo
+- [x] Registro de eventos e inspector ao vivo
+- [x] Seção "Teste com a sua IA"
 
 ### Fase 3: Proteções e acabamento
 - [ ] Rate limit e limites de negócio
