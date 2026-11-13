@@ -4,7 +4,7 @@ import { afterAll, afterEach, describe, expect, it, vi } from 'vitest'
 import { createBarbershop } from '../../server/app/barbershop.js'
 import { insertEvents } from '../../server/db/events.js'
 import { createMcpRequestHandler } from '../../server/mcp/server.js'
-import { createVisitorKey } from '../../server/security/ip.js'
+import { createVisitorIdentifier } from '../../server/security/ip.js'
 import { connectLocalDb } from './helpers.js'
 
 // The MCP server end to end: the SDK's own client talks to our handler in memory, against the seed data
@@ -18,8 +18,8 @@ afterEach(() => sql`
 afterAll(() => sql.end())
 
 const NOW = new Date('2030-01-06T12:00:00-03:00')
-const visitorKey = createVisitorKey('test-salt-0123456789abcdef')
-const handler = createMcpRequestHandler({ shop: createBarbershop({ sql, now: () => NOW }), events: async () => {}, visitorKey })
+const identifyVisitor = createVisitorIdentifier('test-salt-0123456789abcdef')
+const handler = createMcpRequestHandler({ shop: createBarbershop({ sql, now: () => NOW }), events: async () => {}, identifyVisitor })
 
 // Each client comes from its own address, so the per-visitor limit never links two tests.
 let clients = 0
@@ -148,7 +148,7 @@ describe('MCP server: failures', () => {
     const broken = createMcpRequestHandler({
       shop: createBarbershop({ sql: unreachable, now: () => NOW }),
       events: async () => {},
-      visitorKey,
+      identifyVisitor,
     })
     const errors: unknown[] = []
     const originalError = console.error
@@ -215,7 +215,7 @@ describe('MCP server: write tools', () => {
     const { appointment } = await book(await connect('modern', handler, ip))
 
     const [row] = await sql`select * from appointments where id = ${appointment.id}`
-    expect(row?.ip_hash).toBe(visitorKey(new Request('http://barber.test/mcp', { headers: { 'x-real-ip': ip } })))
+    expect(row?.ip_hash).toBe(identifyVisitor(new Request('http://barber.test/mcp', { headers: { 'x-real-ip': ip } })).key)
     expect(JSON.stringify(row)).not.toContain(ip)
   })
 
@@ -301,7 +301,7 @@ describe('MCP server: inspector events', () => {
       for (const row of rows) requestIds.add(row.requestId)
       await insertEvents(sql, rows)
     },
-    visitorKey,
+    identifyVisitor,
   })
   afterEach(async () => {
     if (requestIds.size > 0) await sql`delete from mcp_events where request_id in ${sql([...requestIds])}`

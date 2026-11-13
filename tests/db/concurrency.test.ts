@@ -29,7 +29,7 @@ describe('simultaneous bookings for the same time', () => {
   it('accepts exactly one of 20 requests for the same professional', async () => {
     const results = await Promise.all(
       Array.from({ length: SIMULTANEOUS }, () =>
-        shop.book({ serviceId: service, start, professionalId: ana, visitor: randomUUID() }),
+        shop.book({ serviceId: service, start, professionalId: ana, visitor: { key: randomUUID(), shared: false } }),
       ),
     )
 
@@ -45,7 +45,7 @@ describe('simultaneous bookings for the same time', () => {
 
   it('gives the time once to each professional when the shop chooses', async () => {
     const results = await Promise.all(
-      Array.from({ length: SIMULTANEOUS }, () => shop.book({ serviceId: service, start, visitor: randomUUID() })),
+      Array.from({ length: SIMULTANEOUS }, () => shop.book({ serviceId: service, start, visitor: { key: randomUUID(), shared: false } })),
     )
 
     const booked = results.flatMap((r) => (r.ok ? [r.value.appointment.professional.id] : []))

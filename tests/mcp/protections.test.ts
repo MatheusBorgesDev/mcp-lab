@@ -22,7 +22,7 @@ const shop = {
 const handler = createMcpRequestHandler({
   shop,
   events: async () => {},
-  visitorKey: (request) => `key-of-${request?.headers.get('x-real-ip') ?? 'nobody'}`,
+  identifyVisitor: (request) => ({ key: `key-of-${request?.headers.get('x-real-ip') ?? 'nobody'}`, shared: false }),
 })
 
 async function connect(ip: string): Promise<Client> {
@@ -45,7 +45,7 @@ describe('MCP server: protections', () => {
       arguments: { service_id: 'barba', start: '2030-01-07T10:00:00-03:00' },
     })
 
-    expect(booked.at(-1)?.visitor).toBe('key-of-203.0.113.9')
+    expect(booked.at(-1)?.visitor).toEqual({ key: 'key-of-203.0.113.9', shared: false })
     expect(result).toMatchObject({ isError: true, structuredContent: { code: 'BOOKING_LIMIT_REACHED' } })
   })
 

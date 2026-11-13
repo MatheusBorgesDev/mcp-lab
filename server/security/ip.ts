@@ -1,4 +1,5 @@
 import { createHmac } from 'node:crypto'
+import { isPlatformAddress } from './platforms.js'
 
 const MIN_SALT_LENGTH = 16
 
@@ -34,19 +35,29 @@ function networkOf(ip: string): string {
     .join(':')}::/64`
 }
 
-/**
- * Builds the function that turns a request into the visitor's key: an HMAC of their network with a secret
- * salt, so the stored value (appointments.ip_hash) cannot be turned back into an address by trying them all.
- * Requests without an address share one key.
- */
-export function createVisitorKey(salt: string | undefined): (request: Request | undefined) => string {
+/** Who a request comes from, for the limits. */
+export type Visitor = {
+  /**
+   * An HMAC of the visitor's network with a secret salt, so the stored value (appointments.ip_hash) cannot be
+   * turned back into an address by trying them all. Requests without an address share one key.
+   */
+  key: string
+  /** The address is an AI platform's (claude.ai, ChatGPT), so the key stands for many visitors. */
+  shared: boolean
+}
+
+/** Builds the function that tells who a request comes from. */
+export function createVisitorIdentifier(salt: string | undefined): (request: Request | undefined) => Visitor {
   if (!salt || salt.length < MIN_SALT_LENGTH) {
     throw new Error(`IP_HASH_SALT is missing or too short (at least ${MIN_SALT_LENGTH} characters).`)
   }
   return (request) => {
     const ip = request ? clientIp(request.headers) : undefined
-    return createHmac('sha256', salt)
-      .update(ip ? networkOf(ip) : 'unknown')
-      .digest('hex')
+    return {
+      key: createHmac('sha256', salt)
+        .update(ip ? networkOf(ip) : 'unknown')
+        .digest('hex'),
+      shared: ip !== undefined && isPlatformAddress(ip),
+    }
   }
 }

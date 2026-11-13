@@ -28,6 +28,7 @@ Objetivos:
   - Conexão do servidor: `DATABASE_URL` pelo pooler do Supabase em modo transaction (porta 6543), adequado a funções serverless; prepared statements desligados.
   - Banco e tempo real: Supabase (PostgreSQL + Realtime).
   - Rate limit: Redis gerenciado (Upstash, plano gratuito, pelo Marketplace da Vercel). Só o limite por tempo vai para o Redis; os limites de negócio (reservas ativas por IP, ocupação diária) ficam no Postgres, verificados na mesma transação da reserva.
+  - Visitante por IP e plataformas de IA (decidido em 2026-11-13): os conectores do claude.ai e do ChatGPT chamam o MCP da nuvem da plataforma, não do aparelho do visitante, então um IP dessas faixas representa muitos visitantes. Para eles não vale o limite de reservas por visitante e o rate limit é maior (seção 8); o teto diário e a limpeza diária valem para todos. Faixas: as de saída publicadas pela Anthropic e a lista `chatgpt-connectors.json` da OpenAI (cópia no repositório; se envelhecer, o IP novo só recebe os limites de um visitante).
   - Hospedagem: planos gratuitos da Vercel e do Supabase.
   - Ferramentas: pnpm; Supabase local sobre Docker Engine instalado direto no WSL, subindo só os serviços que cada fase usa.
 - **Identificação do cliente MCP** (`client_label` do inspector): `clientInfo` do envelope `_meta` de cada requisição (protocolo 2026-07-28); para clientes da geração 2025, o header `User-Agent`; sem nenhum dos dois, "Cliente MCP". O valor é autodeclarado: serve só para exibição, nunca para regra ou segurança.
@@ -50,7 +51,7 @@ Objetivos:
 | Antecedência mínima para marcar | 2 horas |
 | Máximo de dias à frente para marcar | 14 dias |
 | Antecedência mínima para cancelar ou remarcar | 2 horas |
-| Reservas ativas por visitante (IP) | 2 |
+| Reservas ativas por visitante (IP; não vale para IPs de plataformas de IA, ver seção 2) | 2 |
 | Ocupação máxima do dia para aceitar reserva de visitante (conta todas as reservas, inclusive as fictícias) | 70% dos horários |
 | Sugestões quando o horário não está livre | 3 horários mais próximos |
 
@@ -228,7 +229,7 @@ Como os eventos são gravados (fase 2):
 
 - Validação estrita de toda entrada (zod), com limites de tamanho e de formato.
 - Rate limit por IP, guardado no Redis (valor inicial: 30 chamadas por minuto e 10 escritas por hora).
-- Limites de negócio: 2 reservas ativas por IP e teto de 70% de ocupação diária (somando visitantes e reservas fictícias; sempre sobram 30% livres para o próximo visitante), verificados no Postgres.
+- Limites de negócio: 2 reservas ativas por IP (exceto IPs de plataformas de IA, seção 2) e teto de 70% de ocupação diária (somando visitantes e reservas fictícias; sempre sobram 30% livres para o próximo visitante), verificados no Postgres.
 - IP armazenado apenas como hash com salt secreto, e só para os limites.
 - Código de reserva armazenado só como hash.
 - Nenhum texto livre de visitante exibido publicamente.

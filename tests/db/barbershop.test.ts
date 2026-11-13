@@ -27,7 +27,7 @@ const MONDAY = '2030-01-07'
 const SUNDAY_NOON = at('2030-01-06', '12:00')
 const shop = createBarbershop({ sql, now: () => SUNDAY_NOON })
 // A new visitor per booking: the per-visitor limit has its own tests (limits.test.ts).
-const visitor = () => `test-visitor-${randomUUID()}`
+const visitor = () => ({ key: `test-visitor-${randomUUID()}`, shared: false })
 
 async function bookOrThrow(start: Date, professionalId = ana) {
   const booked = await shop.book({ serviceId: service, start, professionalId, clientName: 'João Privado', visitor: visitor() })

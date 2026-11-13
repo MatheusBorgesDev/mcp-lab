@@ -42,7 +42,7 @@ const SATURDAY_NOON = at('2030-01-05', '12:00')
 const SUNDAY = '2030-01-06'
 const MONDAY = '2030-01-07'
 const shop = createBarbershop({ sql, now: () => SATURDAY_NOON })
-const newVisitor = () => `test-visitor-${randomUUID()}`
+const newVisitor = () => ({ key: `test-visitor-${randomUUID()}`, shared: false })
 
 async function bookOrThrow(start: Date, professionalId: string, visitor = newVisitor()) {
   const booked = await shop.book({ serviceId: service, start, professionalId, visitor })
@@ -70,7 +70,7 @@ describe('active bookings per visitor', () => {
     await sql`
       insert into appointments (code_hash, professional_id, service_id, starts_at, ends_at, public_alias, ip_hash)
       values (${`test-${randomUUID()}`}, ${ana}, ${service}, ${at('2030-01-05', '09:00')}, ${at('2030-01-05', '09:30')},
-              'Cliente #0001', ${visitor})
+              'Cliente #0001', ${visitor.key})
     `
     await shop.cancel(code)
 
@@ -82,7 +82,7 @@ describe('active bookings per visitor', () => {
     const { appointment } = await bookOrThrow(at(MONDAY, '10:00'), ana, visitor)
 
     const [row] = await sql`select ip_hash from appointments where id = ${appointment.id}`
-    expect(row?.ip_hash).toBe(visitor)
+    expect(row?.ip_hash).toBe(visitor.key)
   })
 
   it('never lets one visitor past the limit with simultaneous requests', async () => {
@@ -99,6 +99,19 @@ describe('active bookings per visitor', () => {
 
     expect(results.filter((r) => r.ok)).toHaveLength(2)
     expect(results.filter((r) => !r.ok).map((r) => !r.ok && r.error.code)).toEqual(Array(2).fill('BOOKING_LIMIT_REACHED'))
+  })
+
+  it("does not hold an AI platform's address to one visitor's limit", async () => {
+    // claude.ai and ChatGPT call from their own servers: one of their addresses stands for many visitors.
+    const platform = { key: newVisitor().key, shared: true }
+    await bookOrThrow(at(MONDAY, '10:00'), ana, platform)
+    await bookOrThrow(at(MONDAY, '10:00'), bia, platform)
+
+    const third = await shop.book({ serviceId: service, start: at(MONDAY, '11:00'), professionalId: ana, visitor: platform })
+
+    expect(third.ok).toBe(true)
+    expect(third.checks.map((c) => c.rule)).not.toContain('visitor_bookings')
+    expect(third.checks.at(-1)).toEqual({ rule: 'daily_capacity', passed: true })
   })
 })
 

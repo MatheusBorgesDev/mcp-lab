@@ -2,7 +2,7 @@ import { createBarbershop } from '../server/app/barbershop.js'
 import { getSql } from '../server/db/client.js'
 import { insertEvents } from '../server/db/events.js'
 import { createMcpRequestHandler } from '../server/mcp/server.js'
-import { createVisitorKey } from '../server/security/ip.js'
+import { createVisitorIdentifier } from '../server/security/ip.js'
 
 let handler: ((request: Request) => Promise<Response>) | undefined
 
@@ -15,7 +15,7 @@ export default {
       handler = createMcpRequestHandler({
         shop: createBarbershop({ sql }),
         events: (rows) => insertEvents(sql, rows),
-        visitorKey: createVisitorKey(process.env.IP_HASH_SALT),
+        identifyVisitor: createVisitorIdentifier(process.env.IP_HASH_SALT),
       })
     }
     return handler(request)

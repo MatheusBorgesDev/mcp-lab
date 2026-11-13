@@ -23,7 +23,7 @@ async function connect({ era = 'modern', name = 'test-client', userAgent, events
   const handler = createMcpRequestHandler({
     shop,
     events: events ?? (async (rows) => void batches.push(rows)),
-    visitorKey: () => 'test-visitor',
+    identifyVisitor: () => ({ key: 'test-visitor', shared: false }),
   })
   const client = new Client(
     { name, version: '1.0.0' },
@@ -111,7 +111,7 @@ describe('MCP server: inspector events', () => {
     const handler = createMcpRequestHandler({
       shop: broken,
       events: async (rows) => void batches.push(rows),
-      visitorKey: () => 'test-visitor',
+      identifyVisitor: () => ({ key: 'test-visitor', shared: false }),
     })
     const client = new Client({ name: 'test-client', version: '1.0.0' }, { versionNegotiation: { mode: { pin: '2026-07-28' } } })
     await client.connect(

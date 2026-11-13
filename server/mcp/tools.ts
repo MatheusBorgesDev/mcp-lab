@@ -4,6 +4,7 @@ import { getPublicOrigin } from 'mcp-handler'
 import type { z } from 'zod'
 import type { Barbershop } from '../app/barbershop.js'
 import { formatZoned } from '../domain/time.js'
+import type { Visitor } from '../security/ip.js'
 import { clientLabel } from '../events/client-label.js'
 import { booked, publicAppointment } from '../events/outcomes.js'
 import { startTrace, type EventRow, type Trace } from '../events/trace.js'
@@ -26,7 +27,7 @@ export type ToolDeps = {
   shop: Barbershop
   events: EventSink
   /** Who a request comes from, for the per-visitor limits (server/security/ip.ts in production). */
-  visitorKey: (request: Request | undefined) => string
+  identifyVisitor: (request: Request | undefined) => Visitor
 }
 
 /**
@@ -272,7 +273,7 @@ function watchUrl(appointmentId: string, ctx: ServerContext): string {
 }
 
 export function registerWriteTools(server: McpServer, deps: ToolDeps): void {
-  const { shop, visitorKey } = deps
+  const { shop, identifyVisitor } = deps
   const { timeZone } = shop.rules
 
   defineTool(
@@ -293,7 +294,7 @@ export function registerWriteTools(server: McpServer, deps: ToolDeps): void {
         start: new Date(input.start),
         ...(input.professional_id === undefined ? {} : { professionalId: input.professional_id }),
         ...(input.client_name === undefined ? {} : { clientName: input.client_name }),
-        visitor: visitorKey(ctx.http?.req),
+        visitor: identifyVisitor(ctx.http?.req),
       })
       trace.checked(result.checks)
       if (!result.ok) return failure(result.error, timeZone)

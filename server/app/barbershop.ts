@@ -20,6 +20,7 @@ import { SHOP_RULES, type ShopRules } from '../domain/rules.js'
 import { addDays, dayBounds, toZoned, zonedToInstant } from '../domain/time.js'
 import type { Schedule } from '../domain/types.js'
 import { generateCode, hashCode, normalizeCode } from '../security/codes.js'
+import type { Visitor } from '../security/ip.js'
 
 export type BarbershopDeps = {
   sql: postgres.Sql
@@ -33,8 +34,9 @@ export type BookInput = {
   start: Date
   professionalId?: string
   clientName?: string
-  /** Who is booking, for the per-visitor limit: the key from server/security/ip.ts. */
-  visitor: string
+  /** Who is booking (server/security/ip.ts). An AI platform's address stands for many visitors, so the
+   * per-visitor limit does not apply to it; the daily limit does. */
+  visitor: Visitor
 }
 export type Booked = { code: string; appointment: Appointment }
 export type RescheduleInput = { code: string; newStart: Date; professionalId?: string }
@@ -140,27 +142,29 @@ export function createBarbershop({ sql, now = () => new Date(), rules = SHOP_RUL
         const { professional, service, startsAt, endsAt } = plan.value
 
         const code = generateCode()
-        const locks = { visitor: input.visitor, day: toZoned(startsAt, rules.timeZone).date, professionalId: professional.id }
+        const { key, shared } = input.visitor
+        const day = toZoned(startsAt, rules.timeZone).date
+        const locks = { ...(shared ? {} : { visitor: key }), day, professionalId: professional.id }
         const written = await unlessOverlap(() =>
-          inAgendaTransaction(sql, locks, (tx) =>
-            gated(
-              [
-                ['visitor_bookings', async () => checkVisitorBookings(await countUpcomingByVisitor(tx, input.visitor, instant), rules)],
-                dailyCapacityGate(tx, schedule, plan.value, rules),
-              ],
-              () =>
-                insertAppointment(tx, {
-                  codeHash: hashCode(code.replace('-', '')),
-                  professionalId: professional.id,
-                  serviceId: service.id,
-                  startsAt,
-                  endsAt,
-                  clientName: input.clientName ?? null,
-                  publicAlias: `Cliente #${randomInt(1000, 10_000)}`,
-                  ipHash: input.visitor,
-                }),
-            ),
-          ),
+          inAgendaTransaction(sql, locks, (tx) => {
+            const visitorGate: Gate = [
+              'visitor_bookings',
+              async () => checkVisitorBookings(await countUpcomingByVisitor(tx, key, instant), rules),
+            ]
+            const gates = [...(shared ? [] : [visitorGate]), dailyCapacityGate(tx, schedule, plan.value, rules)]
+            return gated(gates, () =>
+              insertAppointment(tx, {
+                codeHash: hashCode(code.replace('-', '')),
+                professionalId: professional.id,
+                serviceId: service.id,
+                startsAt,
+                endsAt,
+                clientName: input.clientName ?? null,
+                publicAlias: `Cliente #${randomInt(1000, 10_000)}`,
+                ipHash: key,
+              }),
+            )
+          }),
         )
         if (written === OVERLAP) continue
         checks = [...checks, ...written.checks]
