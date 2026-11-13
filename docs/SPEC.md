@@ -305,7 +305,7 @@ vercel.json
 - [x] Seção "Teste com a sua IA"
 
 ### Fase 3: Proteções e acabamento
-- [ ] Rate limit e limites de negócio
+- [x] Rate limit e limites de negócio
 - [ ] Cron diário
 - [ ] Resource e prompt do MCP
 - [ ] README com arquitetura, decisões e ameaças consideradas
