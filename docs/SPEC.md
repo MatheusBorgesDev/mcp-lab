@@ -31,7 +31,9 @@ Objetivos:
   - Hospedagem: planos gratuitos da Vercel e do Supabase.
   - Ferramentas: pnpm; Supabase local sobre Docker Engine instalado direto no WSL, subindo só os serviços que cada fase usa.
 - **Identificação do cliente MCP** (`client_label` do inspector): `clientInfo` do envelope `_meta` de cada requisição (protocolo 2026-07-28); para clientes da geração 2025, o header `User-Agent`; sem nenhum dos dois, "Cliente MCP". O valor é autodeclarado: serve só para exibição, nunca para regra ou segurança.
-- **Tempo real**: carga inicial lida pelo front direto no Supabase (somente leitura, via RLS). Atualizações ao vivo via **Supabase Realtime Broadcast**, emitidas pelo servidor depois de cada escrita, contendo apenas dados públicos e sanitizados. (Postgres Changes não serve aqui porque a agenda pública é exposta por uma view e não deve vazar colunas privadas.)
+- **Tempo real**: carga inicial lida pelo front direto no Supabase (somente leitura, via RLS). Atualizações ao vivo via **Supabase Realtime Broadcast**, contendo apenas dados públicos e sanitizados. Quem emite é o próprio banco: gatilhos em `appointments` e `mcp_events` chamam `realtime.send` na mesma transação de cada escrita do servidor, então um rollback não emite nada e o servidor não precisa de chave do Supabase. Os canais (`agenda` e `inspector`) são **privados**: uma política RLS em `realtime.messages` deixa o papel `anon` só ouvir esses dois tópicos, sem transmitir. (Em canal público, quem tem a chave pública pode transmitir para todos os visitantes. Postgres Changes não serve aqui porque a agenda pública é exposta por uma view e não deve vazar colunas privadas.)
+  - `agenda`, evento `appointment`: `{ op: 'insert' | 'update' | 'delete', appointment }`, com as colunas da view `public_agenda`. Status `cancelled` ou op `delete` liberam o horário.
+  - `inspector`, evento `call`: `{ events }`, as linhas de `mcp_events` de uma chamada de tool, gravadas num único insert.
 - **Cron diário** (Vercel Cron): reseta a agenda, recria reservas fictícias e limpa eventos antigos. Como efeito colateral, mantém o projeto Supabase ativo (o plano gratuito pausa após 7 dias sem atividade).
 - **Identidade visual** (aprovada em 2026-11-12): barbearia de bairro, com caderno de agenda e impressora de comandas. A agenda é o caderno do balcão (papel, pauta, tinta); o inspector é um quadro verde-escuro onde cada chamada MCP sai como um tíquete de borda serrilhada.
   - Cores, como tokens CSS (tema claro / escuro): papel `#F4EDDF` / `#15130F`; papel 2 `#EAE1CD` / `#1E1B15`; tinta `#1F1A14` / `#EFE6D3`; tinta 2 `#5A5044` / `#B0A38C`; pauta `#D6C9AE` / `#3A3329`; verde placa `#1E4D3A` / `#24573F` (marca, botão, horário ocupado; como texto no escuro, `#7FC2A0`); vermelho poste `#B23A2C` / `#E46B5D` (destaque, erro); latão `#C8963E` / `#D9A84E` (só pisca o que acabou de mudar; nunca é texto no tema claro). O inspector é escuro nos dois temas: quadro `#0F2219` (`#0B1A13` no escuro), giz `#ECE4D1`, comanda `#F6F0E3`, confere `#1E6B47`, não confere `#B23A2C`. Todo texto com contraste de pelo menos 4,5:1.
@@ -230,8 +232,8 @@ Como os eventos são gravados (fase 2):
 - IP armazenado apenas como hash com salt secreto, e só para os limites.
 - Código de reserva armazenado só como hash.
 - Nenhum texto livre de visitante exibido publicamente.
-- Credenciais do banco, chave secreta do Supabase e demais segredos apenas em variáveis de ambiente do servidor.
-- RLS conforme a seção 4.
+- Credenciais do banco e demais segredos apenas em variáveis de ambiente do servidor. O servidor não usa chave do Supabase: o Broadcast sai do próprio banco (seção 2).
+- RLS conforme a seção 4, e em `realtime.messages`: `anon` só lê (ouve) os tópicos `agenda` e `inspector`, e não tem política de escrita.
 - Endpoint do cron protegido por segredo (`CRON_SECRET`).
 - Limite de tamanho do corpo das requisições.
 
@@ -242,7 +244,6 @@ Nunca no repositório. Localmente em `.env.local` (ignorado pelo git); em produ�
 | Variável | Onde | Fase |
 |---|---|---|
 | `DATABASE_URL` | servidor | 1 (local: Supabase local, sem segredo; produção: pooler em modo transaction) |
-| `SUPABASE_URL`, `SUPABASE_SECRET_KEY` | servidor, para o Broadcast | 2 |
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` | front (pública por design, protegida pelo RLS) | 2 |
 | Variáveis do Redis criadas pela integração da Upstash | servidor | 3 |
 | `IP_HASH_SALT`, `CRON_SECRET` | servidor | 3 |

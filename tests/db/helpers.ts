@@ -1,4 +1,6 @@
+import { execFileSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import postgres from 'postgres'
 
 const LOCAL_SUPABASE_URL = 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
@@ -12,6 +14,26 @@ export function connectLocalDb({ max = 4 }: { max?: number } = {}): postgres.Sql
     throw new Error(`Database tests only run against a local database; got host "${hostname}".`)
   }
   return postgres(url, { max, onnotice: () => {} })
+}
+
+/**
+ * A Supabase client with the local publishable key: what a visitor's browser has (role anon). The key is
+ * read from `supabase status`, which prints it only while the local stack runs with auth enabled.
+ */
+export function connectLocalSupabase(): SupabaseClient {
+  const env = Object.fromEntries(
+    execFileSync('pnpm', ['exec', 'supabase', 'status', '-o', 'env'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
+      .split('\n')
+      .flatMap((line) => {
+        const match = /^([A-Z_]+)="(.*)"$/.exec(line)
+        return match ? [[match[1], match[2]]] : []
+      }),
+  )
+  const url = env.API_URL
+  const key = env.PUBLISHABLE_KEY
+  if (!url || !key) throw new Error('Local Supabase is not running with auth enabled (pnpm db:start).')
+  if (!LOCAL_HOSTS.has(new URL(url).hostname)) throw new Error(`Realtime tests only run locally; got "${url}".`)
+  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } })
 }
 
 /** Runs `fn` in a transaction that is always rolled back, so tests leave no data behind. */
