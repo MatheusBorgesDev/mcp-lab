@@ -33,6 +33,11 @@ Objetivos:
 - **Identificação do cliente MCP** (`client_label` do inspector): `clientInfo` do envelope `_meta` de cada requisição (protocolo 2026-07-28); para clientes da geração 2025, o header `User-Agent`; sem nenhum dos dois, "Cliente MCP". O valor é autodeclarado: serve só para exibição, nunca para regra ou segurança.
 - **Tempo real**: carga inicial lida pelo front direto no Supabase (somente leitura, via RLS). Atualizações ao vivo via **Supabase Realtime Broadcast**, emitidas pelo servidor depois de cada escrita, contendo apenas dados públicos e sanitizados. (Postgres Changes não serve aqui porque a agenda pública é exposta por uma view e não deve vazar colunas privadas.)
 - **Cron diário** (Vercel Cron): reseta a agenda, recria reservas fictícias e limpa eventos antigos. Como efeito colateral, mantém o projeto Supabase ativo (o plano gratuito pausa após 7 dias sem atividade).
+- **Identidade visual** (aprovada em 2026-11-12): barbearia de bairro, com caderno de agenda e impressora de comandas. A agenda é o caderno do balcão (papel, pauta, tinta); o inspector é um quadro verde-escuro onde cada chamada MCP sai como um tíquete de borda serrilhada.
+  - Cores, como tokens CSS (tema claro / escuro): papel `#F4EDDF` / `#15130F`; papel 2 `#EAE1CD` / `#1E1B15`; tinta `#1F1A14` / `#EFE6D3`; tinta 2 `#5A5044` / `#B0A38C`; pauta `#D6C9AE` / `#3A3329`; verde placa `#1E4D3A` / `#24573F` (marca, botão, horário ocupado; como texto no escuro, `#7FC2A0`); vermelho poste `#B23A2C` / `#E46B5D` (destaque, erro); latão `#C8963E` / `#D9A84E` (só pisca o que acabou de mudar; nunca é texto no tema claro). O inspector é escuro nos dois temas: quadro `#0F2219` (`#0B1A13` no escuro), giz `#ECE4D1`, comanda `#F6F0E3`, confere `#1E6B47`, não confere `#B23A2C`. Todo texto com contraste de pelo menos 4,5:1.
+  - Tipografia: Fraunces nos títulos, marca e preços (eixos SOFT 100 e WONK 1); Schibsted Grotesk no texto e na interface; IBM Plex Mono em horários, inspector, códigos e apelidos. Fontes auto-hospedadas pelos pacotes `@fontsource`: a página não chama o Google.
+  - Logo: placa esmaltada verde com "MCP / Barber Shop" entre dois postes de barbeiro. Símbolo: o poste (listras vermelho e creme, ponteiras de latão) num quadrado verde, usado como favicon (versão simplificada em 16 px) e como ícone do conector.
+  - Detalhes que assinam: o poste girando no indicador "ao vivo" (parado e "reconectando" quando a conexão cai); o horário que acende em latão ao ser ocupado ou liberado; o tíquete serrilhado; o apelido "Cliente #NNNN" e o código mascarado em fonte mono. Todo movimento respeita `prefers-reduced-motion`.
 
 ## 3. Regras de negócio
 
@@ -298,9 +303,9 @@ vercel.json
 
 ## 13. Decisões em aberto
 
-- Identidade visual da MCP Barber Shop (cores, logo, tipografia): decidir antes da fase 2.
+Nenhuma no momento.
 
-Decididas em 2026-11-12 e movidas para a seção 2: nome, idioma, acesso ao banco, armazenamento do rate limit, identificação do cliente MCP e versões das dependências do MCP.
+Decididas em 2026-11-12 e movidas para a seção 2: nome, idioma, acesso ao banco, armazenamento do rate limit, identificação do cliente MCP, versões das dependências do MCP e identidade visual.
 
 ## 14. Fora do escopo (por enquanto)
 
