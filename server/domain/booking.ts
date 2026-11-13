@@ -20,6 +20,8 @@ export type CheckRule =
   | 'max_days_ahead'
   | 'within_working_hours'
   | 'slot_free'
+  | 'visitor_bookings'
+  | 'daily_capacity'
 
 export type Check = { rule: CheckRule; passed: boolean }
 

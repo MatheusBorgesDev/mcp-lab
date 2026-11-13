@@ -23,6 +23,7 @@ async function connect({ era = 'modern', name = 'test-client', userAgent, events
   const handler = createMcpRequestHandler({
     shop,
     events: events ?? (async (rows) => void batches.push(rows)),
+    visitorKey: () => 'test-visitor',
   })
   const client = new Client(
     { name, version: '1.0.0' },
@@ -107,7 +108,11 @@ describe('MCP server: inspector events', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     const broken = { rules: SHOP_RULES, catalog: () => Promise.reject(new Error('db down')) } as unknown as Barbershop
     const batches: EventRow[][] = []
-    const handler = createMcpRequestHandler({ shop: broken, events: async (rows) => void batches.push(rows) })
+    const handler = createMcpRequestHandler({
+      shop: broken,
+      events: async (rows) => void batches.push(rows),
+      visitorKey: () => 'test-visitor',
+    })
     const client = new Client({ name: 'test-client', version: '1.0.0' }, { versionNegotiation: { mode: { pin: '2026-07-28' } } })
     await client.connect(
       new StreamableHTTPClientTransport(new URL('http://barber.test/mcp'), { fetch: (url, init) => handler(new Request(url, init)) }),

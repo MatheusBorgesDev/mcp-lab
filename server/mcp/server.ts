@@ -1,13 +1,14 @@
 import { createMcpHandler } from 'mcp-handler'
+import { limitBody } from '../security/body-limit.js'
 import { INSTRUCTIONS } from './instructions.js'
 import { registerReadTools, registerWriteTools, type ToolDeps } from './tools.js'
 
 /**
  * The MCP endpoint as a Web handler: protocol 2026-07-28 (stateless) natively, with the stateless
- * Streamable HTTP fallback for 2025-era clients, both handled by mcp-handler.
+ * Streamable HTTP fallback for 2025-era clients, both handled by mcp-handler. Bodies over 64 KB get a 413.
  */
 export function createMcpRequestHandler(deps: ToolDeps): (request: Request) => Promise<Response> {
-  return createMcpHandler(
+  const mcp = createMcpHandler(
     (server) => {
       registerReadTools(server, deps)
       registerWriteTools(server, deps)
@@ -17,4 +18,9 @@ export function createMcpRequestHandler(deps: ToolDeps): (request: Request) => P
       instructions: INSTRUCTIONS,
     },
   )
+  // Oversized bodies are refused before the SDK parses them.
+  return async (request) => {
+    const limited = await limitBody(request)
+    return limited instanceof Response ? limited : mcp(limited)
+  }
 }

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { createBarbershop } from '../../server/app/barbershop.js'
 import { hashCode } from '../../server/security/codes.js'
@@ -25,9 +26,11 @@ const at = (date: string, hhmm: string) => new Date(`${date}T${hhmm}:00-03:00`)
 const MONDAY = '2030-01-07'
 const SUNDAY_NOON = at('2030-01-06', '12:00')
 const shop = createBarbershop({ sql, now: () => SUNDAY_NOON })
+// A new visitor per booking: the per-visitor limit has its own tests (limits.test.ts).
+const visitor = () => `test-visitor-${randomUUID()}`
 
 async function bookOrThrow(start: Date, professionalId = ana) {
-  const booked = await shop.book({ serviceId: service, start, professionalId, clientName: 'João Privado' })
+  const booked = await shop.book({ serviceId: service, start, professionalId, clientName: 'João Privado', visitor: visitor() })
   if (!booked.ok) throw new Error(`booking failed: ${booked.error.code}`)
   return booked.value
 }
@@ -63,7 +66,7 @@ describe('booking service', () => {
   it('refuses a time that is already taken and suggests others', async () => {
     await bookOrThrow(at(MONDAY, '10:00'))
 
-    const second = await shop.book({ serviceId: service, start: at(MONDAY, '10:00'), professionalId: ana })
+    const second = await shop.book({ serviceId: service, start: at(MONDAY, '10:00'), professionalId: ana, visitor: visitor() })
 
     expect(second).toMatchObject({ ok: false, error: { code: 'SLOT_UNAVAILABLE' } })
     expect(second.ok || second.error.suggestions).toHaveLength(3)

@@ -22,7 +22,12 @@ import { advertise, inputs } from './schemas.js'
 /** Writes the inspector steps of one tool call (server/db/events.ts in production). */
 export type EventSink = (rows: EventRow[]) => Promise<void>
 
-export type ToolDeps = { shop: Barbershop; events: EventSink }
+export type ToolDeps = {
+  shop: Barbershop
+  events: EventSink
+  /** Who a request comes from, for the per-visitor limits (server/security/ip.ts in production). */
+  visitorKey: (request: Request | undefined) => string
+}
 
 /**
  * The log line for an unexpected error: stack (type and message first) and code. Not the error's other
@@ -173,7 +178,8 @@ export function registerReadTools(server: McpServer, deps: ToolDeps): void {
       title: 'Check availability',
       description:
         'Free start times for a service on one day, per professional who does it (or only the chosen one). ' +
-        'Times are ISO 8601 in shop time. A day can be empty because of a day off or a holiday (see closures).',
+        'Times are ISO 8601 in shop time. A day can be empty because of a day off or a holiday (see closures), ' +
+        'or because it is full for new bookings (day_full).',
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
     inputs.check_availability,
@@ -185,7 +191,7 @@ export function registerReadTools(server: McpServer, deps: ToolDeps): void {
       })
       if (!result.ok) return failure(result.error, timeZone)
 
-      const { service, professionals, closures, date } = result.value
+      const { service, professionals, closures, date, dayFull } = result.value
       trace.processed({
         kind: 'availability',
         date,
@@ -212,13 +218,17 @@ export function registerReadTools(server: McpServer, deps: ToolDeps): void {
           start: formatZoned(c.startsAt, timeZone),
           end: formatZoned(c.endsAt, timeZone),
         })),
+        day_full: dayFull,
       }
       const lines = professionals.map(
         ({ professional, starts }) => `${professional.name}: ${startRanges(starts, timeZone, slotMinutes)}`,
       )
       const closed = closures.map((c) => `Closed: ${c.reason ?? 'closure'}`)
+      const full = dayFull
+        ? [`${date} is full for new bookings: the shop keeps ${100 - shop.rules.maxDailyOccupancyPercent}% of each day free. Try another day.`]
+        : []
       return success(
-        [`Free start times on ${date} for ${service.name} (${service.durationMin} min):`, ...lines, ...closed].join('\n'),
+        [`Free start times on ${date} for ${service.name} (${service.durationMin} min):`, ...lines, ...closed, ...full].join('\n'),
         structured,
       )
     },
@@ -262,7 +272,7 @@ function watchUrl(appointmentId: string, ctx: ServerContext): string {
 }
 
 export function registerWriteTools(server: McpServer, deps: ToolDeps): void {
-  const { shop } = deps
+  const { shop, visitorKey } = deps
   const { timeZone } = shop.rules
 
   defineTool(
@@ -283,6 +293,7 @@ export function registerWriteTools(server: McpServer, deps: ToolDeps): void {
         start: new Date(input.start),
         ...(input.professional_id === undefined ? {} : { professionalId: input.professional_id }),
         ...(input.client_name === undefined ? {} : { clientName: input.client_name }),
+        visitor: visitorKey(ctx.http?.req),
       })
       trace.checked(result.checks)
       if (!result.ok) return failure(result.error, timeZone)

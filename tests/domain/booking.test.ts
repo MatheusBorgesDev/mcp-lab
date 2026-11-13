@@ -143,6 +143,22 @@ describe('planBooking: the server-side decision for a booking request', () => {
     ])
   })
 
+  it('suggests only days that still have room under the daily limit', () => {
+    // Monday is full: 510 of its 720 working minutes are taken, over the 504 (70%) limit.
+    const schedule = scheduleWith({
+      appointments: [busy('ana', '09:00', '09:30'), busy('ana', '13:00', '18:00'), busy('bia', '14:00', '17:00')],
+    })
+
+    const result = planBooking(schedule, { serviceId: 'corte', start: at(MONDAY, '09:00') }, SUNDAY_NOON)
+
+    expect(result).toMatchObject({ ok: false, error: { code: 'SLOT_UNAVAILABLE' } })
+    expect(result.ok || result.error.suggestions?.map((s) => s.startsAt)).toEqual([
+      at(TUESDAY, '09:00'),
+      at(TUESDAY, '09:15'),
+      at(TUESDAY, '09:30'),
+    ])
+  })
+
   describe('when no professional is chosen', () => {
     it('picks the first professional, in display order, who is free', () => {
       const plan = planOf(planBooking(scheduleWith(), { serviceId: 'corte', start: at(MONDAY, '15:00') }, SUNDAY_NOON))

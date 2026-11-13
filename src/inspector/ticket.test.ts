@@ -78,6 +78,25 @@ describe('ticketView', () => {
     })
   })
 
+  it('names the limit checks in words', () => {
+    const view = ticketView(
+      call([
+        step('validated', {
+          checks: [
+            { rule: 'visitor_bookings', passed: true },
+            { rule: 'daily_capacity', passed: false },
+          ],
+        }),
+      ]),
+      NOW,
+    )
+
+    expect(view.steps[0]?.checks).toEqual([
+      { label: 'até 2 por visitante', passed: true },
+      { label: 'dia até 70%', passed: false },
+    ])
+  })
+
   it.each([
     [{ kind: 'booked', code: 'R1•••-•••••', appointment: {} }, 'reserva criada · R1•••-•••••', true],
     [{ kind: 'refused', code: 'SLOT_UNAVAILABLE', suggestions: [{ start: '2026-11-13T15:15:00-03:00', professional_id: 'rafael' }, { start: '2026-11-13T15:30:00-03:00', professional_id: 'bruno' }] }, 'conflito · sugere 15:15, 15:30', false],

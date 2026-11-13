@@ -1,5 +1,6 @@
 import type postgres from 'postgres'
 import { z } from 'zod'
+import type { LocalDate } from '../domain/time.js'
 
 /** An appointment as the server shows it to its owner. Never carries the client name, IP or code. */
 export type Appointment = {
@@ -58,34 +59,72 @@ export type NewAppointment = {
   endsAt: Date
   clientName: string | null
   publicAlias: string
-  ipHash: string | null
+  /** The visitor key (server/security/ip.ts), never the address itself. */
+  ipHash: string
 }
 
+/** What a write transaction locks: the visitor (on a new booking), the day it writes to and the professional. */
+export type AgendaLocks = { visitor?: string; day: LocalDate; professionalId: string }
+
 /**
- * Writes to one professional's agenda go one at a time. Without this, overlapping inserts that run at the
- * same moment wait on each other inside the exclusion constraint and end in a deadlock instead of a clean
- * overlap error. The lock is released at the end of the transaction.
+ * Runs `work` in a transaction that first takes the agenda locks, always in the same order (visitor, day,
+ * professional) so concurrent writers wait for each other instead of deadlocking. The locks make the limits
+ * exact: two requests at once cannot both count the same free room. The professional's lock also turns
+ * overlapping inserts into a clean overlap error, where they would otherwise deadlock inside the exclusion
+ * constraint. Locks are released at the end of the transaction.
  */
-async function lockAgenda(tx: postgres.TransactionSql, professionalId: string): Promise<void> {
-  await tx`select pg_advisory_xact_lock(hashtextextended(${`agenda:${professionalId}`}, 0))`
+export function inAgendaTransaction<T>(
+  sql: postgres.Sql,
+  locks: AgendaLocks,
+  work: (tx: postgres.TransactionSql) => Promise<T>,
+): Promise<T> {
+  const keys = [
+    ...(locks.visitor === undefined ? [] : [`visitor:${locks.visitor}`]),
+    `day:${locks.day}`,
+    `agenda:${locks.professionalId}`,
+  ]
+  return sql.begin(async (tx) => {
+    for (const key of keys) await tx`select pg_advisory_xact_lock(hashtextextended(${key}, 0))`
+    return work(tx)
+  }) as Promise<T>
+}
+
+/** Confirmed appointments of a visitor that have not started yet. */
+export async function countUpcomingByVisitor(tx: postgres.TransactionSql, visitor: string, now: Date): Promise<number> {
+  const [row] = await tx<{ count: number }[]>`
+    select count(*)::int as count from appointments
+    where ip_hash = ${visitor} and status = 'confirmed' and starts_at > ${now}
+  `
+  return row?.count ?? 0
+}
+
+/** Minutes taken by active appointments (any source) starting in [from, to), except `excludeId`. */
+export async function occupiedMinutesBetween(
+  tx: postgres.TransactionSql,
+  range: { from: Date; to: Date },
+  excludeId?: string,
+): Promise<number> {
+  const [row] = await tx<{ minutes: number }[]>`
+    select coalesce(sum(extract(epoch from ends_at - starts_at) / 60), 0)::int as minutes from appointments
+    where status <> 'cancelled' and starts_at >= ${range.from} and starts_at < ${range.to}
+      ${excludeId === undefined ? tx`` : tx`and id <> ${excludeId}`}
+  `
+  return row?.minutes ?? 0
 }
 
 /** Inserts a confirmed appointment. Throws the exclusion violation (see isSlotConflict) on overlap. */
-export async function insertAppointment(sql: postgres.Sql, input: NewAppointment): Promise<Appointment> {
-  const rows = await sql.begin(async (tx) => {
-    await lockAgenda(tx, input.professionalId)
-    return tx`
-      with a as (
-        insert into appointments
-          (code_hash, professional_id, service_id, starts_at, ends_at, client_name, public_alias, ip_hash, source)
-        values
-          (${input.codeHash}, ${input.professionalId}, ${input.serviceId}, ${input.startsAt}, ${input.endsAt},
-           ${input.clientName}, ${input.publicAlias}, ${input.ipHash}, 'visitor')
-        returning *
-      )
-      ${withNames(tx)}
-    `
-  })
+export async function insertAppointment(tx: postgres.TransactionSql, input: NewAppointment): Promise<Appointment> {
+  const rows = await tx`
+    with a as (
+      insert into appointments
+        (code_hash, professional_id, service_id, starts_at, ends_at, client_name, public_alias, ip_hash, source)
+      values
+        (${input.codeHash}, ${input.professionalId}, ${input.serviceId}, ${input.startsAt}, ${input.endsAt},
+         ${input.clientName}, ${input.publicAlias}, ${input.ipHash}, 'visitor')
+      returning *
+    )
+    ${withNames(tx)}
+  `
   const appointment = toAppointment(rows)
   if (!appointment) throw new Error('insert returned no row')
   return appointment
@@ -101,23 +140,20 @@ export async function findAppointmentByCodeHash(sql: postgres.Sql, codeHash: str
 
 /** Moves a confirmed appointment. Undefined if it is no longer confirmed; throws on overlap. */
 export async function moveAppointment(
-  sql: postgres.Sql,
+  tx: postgres.TransactionSql,
   id: string,
   to: { professionalId: string; startsAt: Date; endsAt: Date },
 ): Promise<Appointment | undefined> {
-  const rows = await sql.begin(async (tx) => {
-    await lockAgenda(tx, to.professionalId)
-    return tx`
-      with a as (
-        update appointments
-        set professional_id = ${to.professionalId}, starts_at = ${to.startsAt}, ends_at = ${to.endsAt},
-            updated_at = now()
-        where id = ${id} and status = 'confirmed'
-        returning *
-      )
-      ${withNames(tx)}
-    `
-  })
+  const rows = await tx`
+    with a as (
+      update appointments
+      set professional_id = ${to.professionalId}, starts_at = ${to.startsAt}, ends_at = ${to.endsAt},
+          updated_at = now()
+      where id = ${id} and status = 'confirmed'
+      returning *
+    )
+    ${withNames(tx)}
+  `
   return toAppointment(rows)
 }
 

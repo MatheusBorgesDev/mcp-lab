@@ -93,6 +93,11 @@ export function addDays(date: LocalDate, days: number): LocalDate {
   return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10)
 }
 
+/** The instants a local date covers in `timeZone`: [from, to). */
+export function dayBounds(date: LocalDate, timeZone: string): { from: Date; to: Date } {
+  return { from: zonedToInstant(date, 0, timeZone), to: zonedToInstant(addDays(date, 1), 0, timeZone) }
+}
+
 export function addMinutes(instant: Date, minutes: number): Date {
   return new Date(instant.getTime() + minutes * MINUTE_MS)
 }

@@ -81,6 +81,24 @@ describe('findAvailability: free start times for a service on a date', () => {
     expect(result.ok && result.value.closures).toEqual([holiday])
   })
 
+  it('offers nothing on a day already full for new bookings, and says so', () => {
+    // Monday: 720 min of work and room up to 504 (70%). 480 taken: no 30-minute service fits anymore.
+    const appointments = [
+      { appointmentId: 'a1', professionalId: 'ana', startsAt: at(MONDAY, '13:00'), endsAt: at(MONDAY, '18:00') },
+      { appointmentId: 'a2', professionalId: 'bia', startsAt: at(MONDAY, '14:00'), endsAt: at(MONDAY, '17:00') },
+    ]
+    const query = { serviceId: 'corte', date: MONDAY }
+
+    const full = findAvailability(scheduleWith({ appointments }), query, SUNDAY_NOON)
+    expect(full).toMatchObject({ ok: true, value: { dayFull: true } })
+    expect(startsOf(full, 'ana')).toEqual([])
+    expect(startsOf(full, 'bia')).toEqual([])
+
+    const roomy = findAvailability(scheduleWith({ appointments: appointments.slice(1) }), query, SUNDAY_NOON)
+    expect(roomy).toMatchObject({ ok: true, value: { dayFull: false } })
+    expect(startsOf(roomy, 'ana')).not.toEqual([])
+  })
+
   it('does not offer starts less than 2 hours from now', () => {
     const result = findAvailability(scheduleWith(), { serviceId: 'corte', date: MONDAY }, at(MONDAY, '08:20'))
 

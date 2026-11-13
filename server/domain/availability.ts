@@ -1,3 +1,4 @@
+import { dayHasRoom } from './limits.js'
 import { fail, ok, type Result } from './result.js'
 import { SHOP_RULES, type ShopRules } from './rules.js'
 import { addDays, addMinutes, toZoned, weekdayOf, zonedToInstant, type LocalDate } from './time.js'
@@ -17,6 +18,8 @@ export type Availability = {
   professionals: Array<{ professional: Professional; starts: Date[] }>
   /** Closures touching that day, for the listed professionals or the whole shop, to explain empty days. */
   closures: Closure[]
+  /** The day is over the daily limit for this service (docs/SPEC.md, section 3): no starts are offered. */
+  dayFull: boolean
 }
 
 const overlaps = (aStart: Date, aEnd: Date, bStart: Date, bEnd: Date) => aStart < bEnd && bStart < aEnd
@@ -107,7 +110,7 @@ export function slotStatus(
   return taken ? { kind: 'busy' } : { kind: 'free' }
 }
 
-/** Free start times of one professional for a service on a date, honouring every time rule. */
+/** Free start times of one professional for a service on a date, honouring every time rule and the daily limit. */
 export function freeStarts(
   schedule: Schedule,
   professionalId: string,
@@ -117,6 +120,7 @@ export function freeStarts(
   rules: ShopRules = SHOP_RULES,
   excludeAppointmentId?: string,
 ): Date[] {
+  if (!dayHasRoom(schedule, date, service.durationMin, rules, excludeAppointmentId)) return []
   const weekday = weekdayOf(date)
   const earliest = addMinutes(now, rules.minAdvanceMinutes)
   const intervals = schedule.workingHours
@@ -165,5 +169,6 @@ export function findAvailability(
         (c.professionalId === null || listed.has(c.professionalId)) &&
         overlaps(c.startsAt, c.endsAt, dayStart, dayEnd),
     ),
+    dayFull: !dayHasRoom(schedule, query.date, service.durationMin, rules, query.excludeAppointmentId),
   })
 }

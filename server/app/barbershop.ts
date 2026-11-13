@@ -2,18 +2,23 @@ import { randomInt } from 'node:crypto'
 import type postgres from 'postgres'
 import {
   cancelAppointment,
+  countUpcomingByVisitor,
   findAppointmentByCodeHash,
+  inAgendaTransaction,
   insertAppointment,
   moveAppointment,
+  occupiedMinutesBetween,
   type Appointment,
 } from '../db/appointments.js'
 import { isSlotConflict } from '../db/client.js'
 import { loadCatalog, loadSchedule, type Catalog } from '../db/schedule.js'
 import { findAvailability, type Availability, type AvailabilityQuery } from '../domain/availability.js'
-import { checkChangeWindow, planBooking, type Check, type Evaluated } from '../domain/booking.js'
+import { checkChangeWindow, planBooking, type Check, type CheckRule, type Evaluated } from '../domain/booking.js'
+import { checkDailyCapacity, checkVisitorBookings, dayCapacityMinutes } from '../domain/limits.js'
 import { fail, ok, type Failure, type Result } from '../domain/result.js'
 import { SHOP_RULES, type ShopRules } from '../domain/rules.js'
-import { addDays, toZoned, zonedToInstant } from '../domain/time.js'
+import { addDays, dayBounds, toZoned, zonedToInstant } from '../domain/time.js'
+import type { Schedule } from '../domain/types.js'
 import { generateCode, hashCode, normalizeCode } from '../security/codes.js'
 
 export type BarbershopDeps = {
@@ -23,7 +28,14 @@ export type BarbershopDeps = {
   rules?: ShopRules
 }
 
-export type BookInput = { serviceId: string; start: Date; professionalId?: string; clientName?: string }
+export type BookInput = {
+  serviceId: string
+  start: Date
+  professionalId?: string
+  clientName?: string
+  /** Who is booking, for the per-visitor limit: the key from server/security/ip.ts. */
+  visitor: string
+}
 export type Booked = { code: string; appointment: Appointment }
 export type RescheduleInput = { code: string; newStart: Date; professionalId?: string }
 export type Cancelled = { appointment: Appointment; alreadyCancelled: boolean }
@@ -48,6 +60,44 @@ const stillContested = (checks: Check[]): Evaluated<never> => ({
   ...fail('SLOT_UNAVAILABLE', 'That time was just taken by someone else. Call check_availability for free times.'),
   checks,
 })
+
+type Gate = [CheckRule, () => Promise<Result<void>>]
+type Gated<T> = { checks: Check[]; result: Result<T> }
+
+/** Runs the limit gates in order and writes only if all pass; the first failure stops. For use inside the
+ * write transaction, so the counts the gates read cannot change before the write. */
+async function gated<T>(gates: Gate[], write: () => Promise<T>): Promise<Gated<T>> {
+  const checks: Check[] = []
+  for (const [rule, gate] of gates) {
+    const result = await gate()
+    checks.push({ rule, passed: result.ok })
+    if (!result.ok) return { checks, result }
+  }
+  return { checks, result: ok(await write()) }
+}
+
+/** The daily occupancy gate (docs/SPEC.md, section 3): counts every active appointment that day, fresh. */
+function dailyCapacityGate(
+  tx: postgres.TransactionSql,
+  schedule: Schedule,
+  plan: { startsAt: Date; service: { durationMin: number } },
+  rules: ShopRules,
+  excludeAppointmentId?: string,
+): Gate {
+  const { date } = toZoned(plan.startsAt, rules.timeZone)
+  return [
+    'daily_capacity',
+    async () =>
+      checkDailyCapacity(
+        {
+          occupiedMinutes: await occupiedMinutesBetween(tx, dayBounds(date, rules.timeZone), excludeAppointmentId),
+          durationMin: plan.service.durationMin,
+          capacityMinutes: dayCapacityMinutes(schedule, date, rules),
+        },
+        rules,
+      ),
+  ]
+}
 
 /** Bookable range: from the start of today to the end of the last bookable day, in shop time. */
 function bookingWindow(now: Date, rules: ShopRules) {
@@ -83,24 +133,39 @@ export function createBarbershop({ sql, now = () => new Date(), rules = SHOP_RUL
       let checks: Check[] = []
       for (let attempt = 1; attempt <= MAX_WRITE_ATTEMPTS; attempt++) {
         const instant = now()
-        const plan = planBooking(await scheduleAt(instant), input, instant, { rules })
+        const schedule = await scheduleAt(instant)
+        const plan = planBooking(schedule, input, instant, { rules })
         if (!plan.ok) return plan
         checks = plan.checks
+        const { professional, service, startsAt, endsAt } = plan.value
 
         const code = generateCode()
-        const appointment = await unlessOverlap(() =>
-          insertAppointment(sql, {
-            codeHash: hashCode(code.replace('-', '')),
-            professionalId: plan.value.professional.id,
-            serviceId: plan.value.service.id,
-            startsAt: plan.value.startsAt,
-            endsAt: plan.value.endsAt,
-            clientName: input.clientName ?? null,
-            publicAlias: `Cliente #${randomInt(1000, 10_000)}`,
-            ipHash: null,
-          }),
+        const locks = { visitor: input.visitor, day: toZoned(startsAt, rules.timeZone).date, professionalId: professional.id }
+        const written = await unlessOverlap(() =>
+          inAgendaTransaction(sql, locks, (tx) =>
+            gated(
+              [
+                ['visitor_bookings', async () => checkVisitorBookings(await countUpcomingByVisitor(tx, input.visitor, instant), rules)],
+                dailyCapacityGate(tx, schedule, plan.value, rules),
+              ],
+              () =>
+                insertAppointment(tx, {
+                  codeHash: hashCode(code.replace('-', '')),
+                  professionalId: professional.id,
+                  serviceId: service.id,
+                  startsAt,
+                  endsAt,
+                  clientName: input.clientName ?? null,
+                  publicAlias: `Cliente #${randomInt(1000, 10_000)}`,
+                  ipHash: input.visitor,
+                }),
+            ),
+          ),
         )
-        if (appointment !== OVERLAP) return { ...ok({ code, appointment }), checks }
+        if (written === OVERLAP) continue
+        checks = [...checks, ...written.checks]
+        if (!written.result.ok) return { ...written.result, checks }
+        return { ...ok({ code, appointment: written.result.value }), checks }
       }
       return stillContested(checks)
     },
@@ -124,8 +189,9 @@ export function createBarbershop({ sql, now = () => new Date(), rules = SHOP_RUL
         ]
         if (!window.ok) return { ...window, checks: before }
 
+        const schedule = await scheduleAt(instant)
         const plan = planBooking(
-          await scheduleAt(instant),
+          schedule,
           {
             serviceId: current.service.id,
             start: input.newStart,
@@ -136,16 +202,21 @@ export function createBarbershop({ sql, now = () => new Date(), rules = SHOP_RUL
         )
         checks = [...before, ...plan.checks]
         if (!plan.ok) return { ...plan, checks }
+        const { professional, startsAt, endsAt } = plan.value
 
-        const moved = await unlessOverlap(() =>
-          moveAppointment(sql, current.id, {
-            professionalId: plan.value.professional.id,
-            startsAt: plan.value.startsAt,
-            endsAt: plan.value.endsAt,
-          }),
+        const locks = { day: toZoned(startsAt, rules.timeZone).date, professionalId: professional.id }
+        const written = await unlessOverlap(() =>
+          inAgendaTransaction(sql, locks, (tx) =>
+            gated([dailyCapacityGate(tx, schedule, plan.value, rules, current.id)], () =>
+              moveAppointment(tx, current.id, { professionalId: professional.id, startsAt, endsAt }),
+            ),
+          ),
         )
-        if (moved === undefined) return { ...notFound(), checks }
-        if (moved !== OVERLAP) return { ...ok(moved), checks }
+        if (written === OVERLAP) continue
+        checks = [...checks, ...written.checks]
+        if (!written.result.ok) return { ...written.result, checks }
+        if (written.result.value === undefined) return { ...notFound(), checks }
+        return { ...ok(written.result.value), checks }
       }
       return stillContested(checks)
     },

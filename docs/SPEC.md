@@ -51,7 +51,7 @@ Objetivos:
 | Máximo de dias à frente para marcar | 14 dias |
 | Antecedência mínima para cancelar ou remarcar | 2 horas |
 | Reservas ativas por visitante (IP) | 2 |
-| Ocupação máxima por visitantes, por dia | 70% dos horários |
+| Ocupação máxima do dia para aceitar reserva de visitante (conta todas as reservas, inclusive as fictícias) | 70% dos horários |
 | Sugestões quando o horário não está livre | 3 horários mais próximos |
 
 Regras adicionais:
@@ -228,7 +228,7 @@ Como os eventos são gravados (fase 2):
 
 - Validação estrita de toda entrada (zod), com limites de tamanho e de formato.
 - Rate limit por IP, guardado no Redis (valor inicial: 30 chamadas por minuto e 10 escritas por hora).
-- Limites de negócio: 2 reservas ativas por IP e teto de 70% de ocupação diária por visitantes, verificados no Postgres.
+- Limites de negócio: 2 reservas ativas por IP e teto de 70% de ocupação diária (somando visitantes e reservas fictícias; sempre sobram 30% livres para o próximo visitante), verificados no Postgres.
 - IP armazenado apenas como hash com salt secreto, e só para os limites.
 - Código de reserva armazenado só como hash.
 - Nenhum texto livre de visitante exibido publicamente.

@@ -4,6 +4,7 @@ import { afterAll, afterEach, describe, expect, it, vi } from 'vitest'
 import { createBarbershop } from '../../server/app/barbershop.js'
 import { insertEvents } from '../../server/db/events.js'
 import { createMcpRequestHandler } from '../../server/mcp/server.js'
+import { createVisitorKey } from '../../server/security/ip.js'
 import { connectLocalDb } from './helpers.js'
 
 // The MCP server end to end: the SDK's own client talks to our handler in memory, against the seed data
@@ -17,15 +18,21 @@ afterEach(() => sql`
 afterAll(() => sql.end())
 
 const NOW = new Date('2030-01-06T12:00:00-03:00')
-const handler = createMcpRequestHandler({ shop: createBarbershop({ sql, now: () => NOW }), events: async () => {} })
+const visitorKey = createVisitorKey('test-salt-0123456789abcdef')
+const handler = createMcpRequestHandler({ shop: createBarbershop({ sql, now: () => NOW }), events: async () => {}, visitorKey })
 
-async function connect(era: 'modern' | 'legacy' = 'modern', to = handler): Promise<Client> {
+// Each client comes from its own address, so the per-visitor limit never links two tests.
+let clients = 0
+const nextIp = () => `198.51.100.${++clients % 250}`
+
+async function connect(era: 'modern' | 'legacy' = 'modern', to = handler, ip = nextIp()): Promise<Client> {
   const client = new Client(
     { name: 'test-client', version: '1.0.0' },
     era === 'modern' ? { versionNegotiation: { mode: { pin: '2026-07-28' } } } : {},
   )
   const transport = new StreamableHTTPClientTransport(new URL('http://barber.test/mcp'), {
     fetch: (url, init) => to(new Request(url, init)),
+    requestInit: { headers: { 'x-real-ip': ip } },
   })
   await client.connect(transport)
   return client
@@ -141,6 +148,7 @@ describe('MCP server: failures', () => {
     const broken = createMcpRequestHandler({
       shop: createBarbershop({ sql: unreachable, now: () => NOW }),
       events: async () => {},
+      visitorKey,
     })
     const errors: unknown[] = []
     const originalError = console.error
@@ -199,6 +207,16 @@ describe('MCP server: write tools', () => {
       isError: false,
       data: { appointment: { id: appointment.id } },
     })
+  })
+
+  it('keeps only a key derived from the visitor address, never the address', async () => {
+    const ip = '203.0.113.77'
+
+    const { appointment } = await book(await connect('modern', handler, ip))
+
+    const [row] = await sql`select * from appointments where id = ${appointment.id}`
+    expect(row?.ip_hash).toBe(visitorKey(new Request('http://barber.test/mcp', { headers: { 'x-real-ip': ip } })))
+    expect(JSON.stringify(row)).not.toContain(ip)
   })
 
   it('links to the production site when Vercel provides its URL', async () => {
@@ -283,6 +301,7 @@ describe('MCP server: inspector events', () => {
       for (const row of rows) requestIds.add(row.requestId)
       await insertEvents(sql, rows)
     },
+    visitorKey,
   })
   afterEach(async () => {
     if (requestIds.size > 0) await sql`delete from mcp_events where request_id in ${sql([...requestIds])}`
@@ -303,9 +322,19 @@ describe('MCP server: inspector events', () => {
     expect(rows.every((r) => r.tool_name === 'book_appointment' && r.client_label === 'Cliente MCP')).toBe(true)
     expect(rows[0]?.detail).toEqual({ args: { service_id: 'corte-masculino', start: NINE }, redacted: ['client_name'] })
     // No professional chosen: the shop picks among those who do the service, so that rule is not checked.
+    // The limits come last: they are checked again inside the write.
     expect(rows[1]?.detail.checks).toEqual(
-      ['input', 'service_exists', 'on_slot_grid', 'min_advance', 'max_days_ahead', 'within_working_hours', 'slot_free']
-        .map((rule) => ({ rule, passed: true })),
+      [
+        'input',
+        'service_exists',
+        'on_slot_grid',
+        'min_advance',
+        'max_days_ahead',
+        'within_working_hours',
+        'slot_free',
+        'visitor_bookings',
+        'daily_capacity',
+      ].map((rule) => ({ rule, passed: true })),
     )
     expect(rows[2]?.detail).toEqual({
       kind: 'booked',

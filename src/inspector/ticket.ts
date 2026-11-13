@@ -35,6 +35,8 @@ const RULE: Record<string, string> = {
   max_days_ahead: 'até 14 dias',
   within_working_hours: 'no expediente',
   slot_free: 'horário livre',
+  visitor_bookings: 'até 2 por visitante',
+  daily_capacity: 'dia até 70%',
 }
 
 const REFUSAL: Record<string, string> = {
