@@ -27,6 +27,13 @@ describe('feedEntry', () => {
     })
   })
 
+  it('keys each entry by its message, so two changes in the same instant stay apart', () => {
+    const first = feedEntry({ op: 'update', appointment: appt(), catalog, now: NOW, messageId: 'm1' })
+    const second = feedEntry({ op: 'update', appointment: appt(), catalog, now: NOW, messageId: 'm2' })
+
+    expect(first?.key).not.toBe(second?.key)
+  })
+
   it('names the day when it is not today', () => {
     expect(text('insert', appt({ startsAt: at('09:30', '2026-11-13') }))).toBe('Cliente #2268 marcou Barba com o Rafael amanhã às 9h30')
     expect(text('insert', appt({ startsAt: at('10:00', '2026-11-19') }))).toBe('Cliente #2268 marcou Barba com o Rafael qui, 19/11 às 10h')

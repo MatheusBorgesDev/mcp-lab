@@ -1,6 +1,8 @@
 import { Agenda } from './agenda/Agenda'
 import type { AgendaSource } from './agenda/load'
 import styles from './App.module.css'
+import { Inspector } from './inspector/Inspector'
+import type { InspectorSource } from './inspector/load'
 import { SiteHeader } from './site/SiteHeader'
 import { Menu } from './vitrine/Menu'
 import { ShopFacts } from './vitrine/ShopFacts'
@@ -11,9 +13,11 @@ type AppProps = {
   agenda?: AgendaSource | null
   /** The appointment to show, from the link the AI gives after a booking (`?appointment=<id>`). */
   targetId?: string | null
+  /** Where the inspector reads the recent calls from; null without Supabase settings. */
+  inspector?: InspectorSource | null
 }
 
-export default function App({ agenda = null, targetId = null }: AppProps) {
+export default function App({ agenda = null, targetId = null, inspector = null }: AppProps) {
   return (
     <>
       <a className="skip" href="#conteudo">
@@ -38,11 +42,7 @@ export default function App({ agenda = null, targetId = null }: AppProps) {
 
         <div className={styles.live}>
           <Agenda source={agenda} targetId={targetId} />
-          <section id="inspector" aria-labelledby="inspector-titulo" className={styles.inspector}>
-            <h2 id="inspector-titulo">Inspector</h2>
-            <p className={styles.sub}>cada chamada MCP, da chegada à resposta</p>
-            <p className={styles.foot}>sem IP, sem nome, sem código completo · só o que é público</p>
-          </section>
+          <Inspector source={inspector} />
         </div>
 
         <Menu />

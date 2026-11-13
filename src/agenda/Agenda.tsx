@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useReducer, useRef, useState, type CSSProperties } from 'react'
 import { useCatalog } from '../data/catalog-context'
+import { useNow } from '../lib/useNow'
 import { useBroadcast, useLive } from '../live/hooks'
 import { agendaDays } from './days'
 import { feedEntry, type FeedEntry } from './feed'
@@ -10,16 +11,6 @@ import { parseAgendaMessage } from './schema'
 import { clockLabel, hourLabel, longDate, MAX_DAYS_AHEAD, shopTime, SLOT_MINUTES, type LocalDate } from './time'
 import type { Closure } from './types'
 import styles from './Agenda.module.css'
-
-/** The current time, refreshed every half minute (moves the "now" line). */
-function useNow(): Date {
-  const [now, setNow] = useState(() => new Date())
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 30_000)
-    return () => clearInterval(timer)
-  }, [])
-  return now
-}
 
 const FLASH_MS = { new: 1800, freed: 1600 }
 const FEED_SIZE = 6
@@ -84,7 +75,7 @@ export function Agenda({ source, targetId }: { source: AgendaSource | null; targ
   useBroadcast('agenda', ({ payload }) => {
     const change = parseAgendaMessage(payload)
     if (!change) return
-    dispatch({ type: 'changed', ...change })
+    dispatch({ type: 'changed', op: change.op, appointment: change.appointment })
     if (catalog.status !== 'ready') return
     const entry = feedEntry({ ...change, catalog: catalog.catalog, now: new Date() })
     if (entry) setFeed((entries) => [entry, ...entries].slice(0, FEED_SIZE))

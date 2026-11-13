@@ -21,8 +21,10 @@ export function feedEntry(input: {
   appointment: Appointment
   catalog: Catalog
   now: Date
+  /** The broadcast's own id: two changes may arrive in the same millisecond. */
+  messageId?: string
 }): FeedEntry | null {
-  const { op, appointment: a, catalog, now } = input
+  const { op, appointment: a, catalog, now, messageId } = input
   const service = catalog.services.find((s) => s.id === a.serviceId)?.name ?? 'um horário'
   const barber = catalog.professionals.find((p) => p.id === a.professionalId)?.name ?? 'a equipe'
   const what = `${service} com o ${barber}`
@@ -34,5 +36,6 @@ export function feedEntry(input: {
     const moment = when(a.startsAt, now)
     text = `${a.alias} remarcou ${what} para ${moment.startsWith('às') ? `as${moment.slice(2)}` : moment}`
   }
-  return text ? { key: `${a.id}:${op}:${now.getTime()}`, time: clockLabel(shopTime(now).minutes), text } : null
+  const key = messageId ?? `${a.id}:${op}:${now.getTime()}`
+  return text ? { key, time: clockLabel(shopTime(now).minutes), text } : null
 }

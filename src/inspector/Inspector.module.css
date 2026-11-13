@@ -1,0 +1,167 @@
+/* A dark green board where each MCP call prints as a ticket with a serrated edge. Dark in both themes. */
+.inspector {
+  min-width: 0;
+  border: 1px solid var(--board-line);
+  border-radius: 14px;
+  padding: 16px;
+  background: radial-gradient(80% 50% at 80% 0%, rgb(134 207 160 / 7%), transparent 70%), var(--board);
+  color: var(--chalk);
+}
+
+.inspector h2 {
+  margin: 0;
+  font-weight: 700;
+  font-size: 24px;
+}
+
+.sub {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--chalk-2);
+}
+
+.note {
+  margin: 14px 0 0;
+  font-size: 13.5px;
+  color: var(--chalk-2);
+}
+
+.foot {
+  margin: 14px 0 0;
+  font: 500 10.5px var(--mono);
+  color: var(--chalk-2);
+}
+
+.tape {
+  display: grid;
+  gap: 12px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ticketWrap {
+  filter: drop-shadow(0 6px 10px rgb(0 0 0 / 35%));
+  animation: print 0.55s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+@keyframes print {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+}
+
+/* The serrated bottom edge: a conic-gradient mask repeated every 2 × --zz. */
+.ticket {
+  --zz: 5px;
+  padding: 10px 12px 16px;
+  border-radius: 3px 3px 0 0;
+  background: var(--ticket);
+  color: var(--ticket-ink);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.45;
+  mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / calc(2 * var(--zz)) 100%;
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tool {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+  font-size: 12.5px;
+}
+
+.client {
+  flex: none;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--brand-green);
+  color: var(--brand-cream);
+  font-size: 10.5px;
+  font-weight: 500;
+}
+
+.meta {
+  margin: 2px 0 6px;
+  font-size: 10.5px;
+  color: var(--ticket-ink-2);
+}
+
+.steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.steps li {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 8px;
+  padding: 4px 0;
+  border-top: 1px dashed #cdbfa3;
+  overflow-wrap: anywhere;
+  transition:
+    opacity 0.35s,
+    transform 0.35s;
+}
+
+.steps li[data-state="pending"] {
+  opacity: 0;
+  transform: translateY(-3px);
+}
+
+.k {
+  color: var(--ticket-ink-2);
+  white-space: nowrap;
+}
+
+.k::before {
+  content: "● ";
+  color: #cdbfa3;
+}
+
+.steps li[data-state="done"] .k::before {
+  color: var(--ticket-ok);
+}
+
+.steps li[data-state="fail"] .k::before {
+  color: var(--ticket-err);
+}
+
+.ok {
+  color: var(--ticket-ok);
+  font-weight: 600;
+}
+
+.no {
+  color: var(--ticket-err);
+  font-weight: 600;
+}
+
+.check {
+  margin-right: 8px;
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  .inspector {
+    padding-inline: 12px;
+  }
+
+  .steps li {
+    grid-template-columns: 88px minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .check {
+    white-space: normal;
+  }
+}

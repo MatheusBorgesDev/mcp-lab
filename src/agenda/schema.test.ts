@@ -32,8 +32,12 @@ describe('agenda schemas', () => {
     ])
   })
 
-  it('reads a broadcast', () => {
-    expect(parseAgendaMessage({ op: 'update', appointment: ROW, id: 'message-id' })).toEqual({ op: 'update', appointment: APPOINTMENT })
+  it('reads a broadcast, with the id realtime.send gives each message', () => {
+    expect(parseAgendaMessage({ op: 'update', appointment: ROW, id: 'message-id' })).toEqual({
+      op: 'update',
+      appointment: APPOINTMENT,
+      messageId: 'message-id',
+    })
   })
 
   it.each([

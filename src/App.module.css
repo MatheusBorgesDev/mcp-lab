@@ -35,32 +35,6 @@
   align-items: start;
 }
 
-.inspector h2 {
-  margin: 0;
-  font-weight: 700;
-  font-size: 24px;
-}
-
-.inspector {
-  border: 1px solid var(--board-line);
-  border-radius: 14px;
-  padding: 16px;
-  background: radial-gradient(80% 50% at 80% 0%, rgb(134 207 160 / 7%), transparent 70%), var(--board);
-  color: var(--chalk);
-}
-
-.sub {
-  margin: 2px 0 0;
-  font-size: 13px;
-  color: var(--chalk-2);
-}
-
-.foot {
-  margin: 14px 0 0;
-  font: 500 10.5px var(--mono);
-  color: var(--chalk-2);
-}
-
 .footer {
   padding-block: 24px 40px;
   border-top: 1px solid var(--rule);

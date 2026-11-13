@@ -13,6 +13,7 @@ import { supabaseAgendaSource } from './agenda/load.ts'
 import App from './App.tsx'
 import { loadCatalog } from './data/catalog.ts'
 import { CatalogProvider } from './data/CatalogProvider.tsx'
+import { supabaseInspectorSource } from './inspector/load.ts'
 import { createSupabase } from './lib/supabase.ts'
 import { createLiveConnection } from './live/connection.ts'
 import { LiveProvider } from './live/LiveProvider.tsx'
@@ -29,12 +30,13 @@ const live = createLiveConnection(supabase)
 const loadShopCatalog = supabase ? () => loadCatalog(supabase) : null
 const agenda = supabase ? supabaseAgendaSource(supabase) : null
 const targetId = new URLSearchParams(window.location.search).get('appointment')
+const inspector = supabase ? supabaseInspectorSource(supabase) : null
 
 createRoot(root).render(
   <StrictMode>
     <LiveProvider connection={live}>
       <CatalogProvider load={loadShopCatalog}>
-        <App agenda={agenda} targetId={targetId} />
+        <App agenda={agenda} targetId={targetId} inspector={inspector} />
       </CatalogProvider>
     </LiveProvider>
   </StrictMode>,

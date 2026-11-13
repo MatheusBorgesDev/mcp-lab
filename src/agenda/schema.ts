@@ -22,7 +22,12 @@ const closureRow = z.object({
   reason: z.nullable(z.string()),
 })
 
-const agendaMessage = z.object({ op: z.enum(['insert', 'update', 'delete']), appointment: appointmentRow })
+// realtime.send adds a unique `id` to each payload.
+const agendaMessage = z.object({
+  op: z.enum(['insert', 'update', 'delete']),
+  appointment: appointmentRow,
+  id: z.optional(z.string()),
+})
 
 const toAppointment = (row: z.infer<typeof appointmentRow>): Appointment => ({
   id: row.id,
@@ -45,7 +50,11 @@ export const parseClosures = (rows: unknown): Closure[] =>
     .parse(rows)
     .map((r) => ({ professionalId: r.professional_id, startsAt: new Date(r.starts_at), endsAt: new Date(r.ends_at), reason: r.reason }))
 
-export function parseAgendaMessage(payload: unknown): { op: 'insert' | 'update' | 'delete'; appointment: Appointment } | null {
+export type AgendaChange = { op: 'insert' | 'update' | 'delete'; appointment: Appointment; messageId?: string }
+
+export function parseAgendaMessage(payload: unknown): AgendaChange | null {
   const parsed = agendaMessage.safeParse(payload)
-  return parsed.success ? { op: parsed.data.op, appointment: toAppointment(parsed.data.appointment) } : null
+  if (!parsed.success) return null
+  const { op, appointment, id } = parsed.data
+  return { op, appointment: toAppointment(appointment), ...(id && { messageId: id }) }
 }

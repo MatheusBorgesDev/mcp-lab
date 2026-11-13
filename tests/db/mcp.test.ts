@@ -289,9 +289,9 @@ describe('MCP server: inspector events', () => {
     requestIds.clear()
   })
 
-  const stored = () => sql<Array<{ tool_name: string; step: string; detail: Structured; client_label: string }>>`
-    select tool_name, step, detail, client_label from mcp_events where request_id in ${sql([...requestIds])} order by id
-  `
+  const stored = (ids: Iterable<string> = requestIds) => sql<
+    Array<{ tool_name: string; step: string; detail: Structured; client_label: string }>
+  >`select tool_name, step, detail, client_label from mcp_events where request_id in ${sql([...ids])} order by id`
 
   it('records a booking: the arguments without the name, the checks it passed and the masked code', async () => {
     const client = await connect('modern', inspected)
@@ -326,11 +326,11 @@ describe('MCP server: inspector events', () => {
   it('records a refusal with the failed check and the suggested times', async () => {
     const client = await connect('modern', inspected)
     await book(client)
-    requestIds.clear()
+    const before = new Set(requestIds)
 
     await call(client, 'book_appointment', { service_id: 'corte-masculino', start: NINE, professional_id: 'lucas' })
 
-    const rows = await stored()
+    const rows = await stored([...requestIds].filter((id) => !before.has(id)))
     expect(rows.map((r) => r.step)).toEqual(['received', 'validated', 'processed', 'responded'])
     expect(rows[1]?.detail.checks).toContainEqual({ rule: 'slot_free', passed: false })
     expect(rows[2]?.detail).toMatchObject({

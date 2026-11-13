@@ -1,6 +1,6 @@
 // Shop time on the page: the same helpers the server uses (pure functions, no Node APIs).
 import { SHOP_RULES } from '../../server/domain/rules.js'
-import { addDays, toZoned, weekdayOf, zonedToInstant, type LocalDate } from '../../server/domain/time.js'
+import { addDays, formatZoned, toZoned, weekdayOf, zonedToInstant, type LocalDate } from '../../server/domain/time.js'
 
 export { addDays, weekdayOf, type LocalDate }
 
@@ -9,6 +9,9 @@ export const SLOT_MINUTES = SHOP_RULES.slotMinutes
 export const MAX_DAYS_AHEAD = SHOP_RULES.maxDaysAhead
 
 export const shopTime = (instant: Date) => toZoned(instant, SHOP_TIME_ZONE)
+
+/** "17:31:07", shop time. */
+export const clockWithSeconds = (instant: Date) => formatZoned(instant, SHOP_TIME_ZONE).slice(11, 19)
 
 /** The instants where a shop day starts and ends. */
 export const dayRange = (date: LocalDate) => ({
