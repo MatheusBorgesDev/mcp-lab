@@ -1,0 +1,69 @@
+.header {
+  border-bottom: 1px solid var(--rule);
+}
+
+/* The pole's stripes as a band across the top of the shop. */
+.band {
+  height: 10px;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--brand-red) 0 12px,
+    var(--brand-cream) 12px 24px,
+    var(--brand-green) 24px 36px,
+    var(--brand-cream) 36px 48px
+  );
+}
+
+.bar {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px 28px;
+  padding-block: 14px;
+}
+
+.home {
+  color: inherit;
+  text-decoration: none;
+  border-radius: 8px;
+}
+
+.nav {
+  display: flex;
+  gap: 22px;
+  justify-content: flex-end;
+  font-size: 14.5px;
+  font-weight: 500;
+}
+
+.nav a {
+  color: var(--ink);
+  text-decoration: none;
+  padding: 6px 0;
+  border-bottom: 2px solid transparent;
+}
+
+.nav a:hover {
+  color: var(--red);
+  border-bottom-color: currentColor;
+}
+
+/* Narrow screens: name and status on top, the sections in a row that scrolls sideways. */
+@media (max-width: 760px) {
+  .bar {
+    grid-template-columns: 1fr auto;
+  }
+
+  .nav {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: flex-start;
+    overflow-x: auto;
+    white-space: nowrap;
+    margin-inline: -16px;
+    padding-inline: 16px;
+    scrollbar-width: none;
+    /* Fades out at the right edge: there is more to scroll to. */
+    mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
+  }
+}

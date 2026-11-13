@@ -1,0 +1,108 @@
+.hero {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 40px;
+  align-items: start;
+  padding-block: 44px 36px;
+}
+
+.title {
+  margin: 12px 0 16px;
+  font-variation-settings: "SOFT" 100, "WONK" 1, "opsz" 144;
+  font-weight: 800;
+  font-size: clamp(38px, 5.2vw, 60px);
+  line-height: 0.98;
+  letter-spacing: -0.025em;
+}
+
+.title em {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--red);
+}
+
+.lede {
+  max-width: 46ch;
+  margin: 0;
+  font-size: 17px;
+  color: var(--ink-2);
+}
+
+.try {
+  border: 1.5px solid var(--ink);
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.try h2 {
+  margin: 0;
+  font-weight: 700;
+  font-size: 24px;
+}
+
+.live {
+  display: grid;
+  grid-template-columns: 1.55fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.agenda {
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.agenda h2,
+.inspector h2,
+.menu h2 {
+  margin: 0;
+  font-weight: 700;
+  font-size: 24px;
+}
+
+.inspector {
+  border: 1px solid var(--board-line);
+  border-radius: 14px;
+  padding: 16px;
+  background: radial-gradient(80% 50% at 80% 0%, rgb(134 207 160 / 7%), transparent 70%), var(--board);
+  color: var(--chalk);
+}
+
+.sub {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--chalk-2);
+}
+
+.foot {
+  margin: 14px 0 0;
+  font: 500 10.5px var(--mono);
+  color: var(--chalk-2);
+}
+
+.menu {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 36px;
+  padding-block: 40px;
+}
+
+.footer {
+  padding-block: 24px 40px;
+  border-top: 1px solid var(--rule);
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+
+.footer p {
+  margin: 0;
+}
+
+@media (max-width: 1000px) {
+  .hero,
+  .live,
+  .menu {
+    grid-template-columns: 1fr;
+  }
+}

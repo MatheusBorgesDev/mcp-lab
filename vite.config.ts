@@ -13,6 +13,16 @@ export default defineConfig({
         test: { name: 'unit', include: ['tests/**/*.test.ts'], exclude: ['tests/db/**'] },
       },
       {
+        // The page (src/): React components and front logic, in a simulated browser.
+        extends: true,
+        test: {
+          name: 'web',
+          environment: 'jsdom',
+          include: ['src/**/*.test.{ts,tsx}'],
+          setupFiles: ['src/test/setup.ts'],
+        },
+      },
+      {
         // Needs the local Supabase running (pnpm db:start). Files may run in parallel: each one either
         // rolls its transaction back or uses committed rows with its own id prefix (tests/db/helpers.ts).
         extends: true,

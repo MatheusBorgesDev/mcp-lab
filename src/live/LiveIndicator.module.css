@@ -1,0 +1,47 @@
+.live {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: 600 11.5px/1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* A window onto 45° stripes. One vertical period of stripes 8px apart is 8 / cos 45° = 11.314px, so the
+   loop has no seam. */
+.pole {
+  position: relative;
+  overflow: hidden;
+  flex: none;
+  width: 9px;
+  height: 20px;
+  border-radius: 5px;
+  box-shadow: 0 0 0 1.5px var(--brand-brass);
+}
+
+.pole::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 48px;
+  background: repeating-linear-gradient(-45deg, var(--brand-red) 0 4px, var(--brand-cream) 4px 8px);
+}
+
+.live[data-state="live"] .pole::before {
+  animation: turn 1.2s linear infinite;
+}
+
+.live:not([data-state="live"]) {
+  color: var(--ink-2);
+}
+
+.live:not([data-state="live"]) .pole {
+  opacity: 0.55;
+}
+
+@keyframes turn {
+  to {
+    transform: translateY(-11.314px);
+  }
+}

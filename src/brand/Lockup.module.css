@@ -1,0 +1,36 @@
+.lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--ink);
+}
+
+.mark {
+  width: 40px;
+  height: 40px;
+  flex: none;
+}
+
+.name {
+  display: flex;
+  flex-direction: column;
+}
+
+.mcp {
+  font-family: var(--display);
+  font-variation-settings: "SOFT" 100, "WONK" 1, "opsz" 72;
+  font-weight: 900;
+  font-size: 25px;
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+}
+
+.sub {
+  font-family: var(--display);
+  font-variation-settings: "SOFT" 100, "WONK" 1;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 15.5px;
+  line-height: 1.2;
+  color: var(--red);
+}

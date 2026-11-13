@@ -1,0 +1,78 @@
+/* Visual identity (docs/SPEC.md, section 2). Light theme by default, dark by the system setting; data-theme on
+   <html> forces either one. Every text color keeps at least 4.5:1 against its background. */
+:root {
+  --paper: #f4eddf;
+  --paper-2: #eae1cd;
+  --ink: #1f1a14;
+  --ink-2: #5a5044;
+  --rule: #d6c9ae;
+  --rule-soft: #e4dac5;
+  --green: #1e4d3a;
+  --green-text: #1e4d3a;
+  --green-wash: #dce3d3;
+  --on-green: #f4eddf;
+  --red: #b23a2c;
+  --brass: #c8963e;
+
+  /* The inspector is a dark board in both themes. */
+  --board: #0f2219;
+  --board-2: #163024;
+  --board-line: #24453a;
+  --chalk: #ece4d1;
+  --chalk-2: #9db3a6;
+  --ticket: #f6f0e3;
+  --ticket-ink: #1f1a14;
+  --ticket-ink-2: #5a5044;
+  --ticket-ok: #1e6b47;
+  --ticket-err: #b23a2c;
+
+  /* Brand colors never change with the theme: the mark, the pole. */
+  --brand-green: #1e4d3a;
+  --brand-red: #b23a2c;
+  --brand-cream: #f4eddf;
+  --brand-brass: #c8963e;
+
+  --display: "Fraunces Variable", Georgia, serif;
+  --text: "Schibsted Grotesk Variable", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #15130f;
+    --paper-2: #1e1b15;
+    --ink: #efe6d3;
+    --ink-2: #b0a38c;
+    --rule: #3a3329;
+    --rule-soft: #2a251d;
+    --green: #24573f;
+    --green-text: #7fc2a0;
+    --green-wash: #1d2c23;
+    --red: #e46b5d;
+    --brass: #d9a84e;
+    --board: #0b1a13;
+    --board-2: #12281d;
+    --board-line: #21402f;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper: #15130f;
+  --paper-2: #1e1b15;
+  --ink: #efe6d3;
+  --ink-2: #b0a38c;
+  --rule: #3a3329;
+  --rule-soft: #2a251d;
+  --green: #24573f;
+  --green-text: #7fc2a0;
+  --green-wash: #1d2c23;
+  --red: #e46b5d;
+  --brass: #d9a84e;
+  --board: #0b1a13;
+  --board-2: #12281d;
+  --board-line: #21402f;
+  color-scheme: dark;
+}
