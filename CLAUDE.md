@@ -15,7 +15,8 @@ Projeto de portfólio: servidor MCP de agendamento de uma barbearia fictícia, a
 ## Convenções
 
 - TypeScript em modo strict em todo o projeto.
-- Toda entrada externa validada com `zod`.
+- Toda entrada externa validada com `zod`. No front, `zod/mini` (bundle menor): linhas do Supabase e mensagens do tempo real também são entrada externa.
+- `server/domain/time.ts` e `server/domain/rules.ts` também são importados pelo front (fuso de São Paulo, regras da agenda): nada de APIs do Node neles.
 - Regras de negócio em `server/domain`, como funções puras e testadas, sem acesso a banco ou HTTP.
 - Horários sempre armazenados como `timestamptz`; conversão para `America/Sao_Paulo` só na borda.
 - O front nunca escreve no banco. Toda escrita passa pelas funções do servidor, pela conexão Postgres do servidor (`DATABASE_URL`).
@@ -29,11 +30,11 @@ Projeto de portfólio: servidor MCP de agendamento de uma barbearia fictícia, a
 
 ## Comandos
 
-- `pnpm dev`: página e funções de `/api` na mesma porta (5173). O plugin `dev/vercel-api-plugin.ts` serve `/api/<nome>` a partir de `api/<nome>.ts`, aplica os rewrites exatos do `vercel.json` (o MCP fica em http://localhost:5173/mcp) e carrega as variáveis do `.env.local` no `process.env`, como a Vercel. Na primeira vez: `cp .env.example .env.local`.
+- `pnpm dev`: página e funções de `/api` na mesma porta (5173). O plugin `dev/vercel-api-plugin.ts` serve `/api/<nome>` a partir de `api/<nome>.ts`, aplica os rewrites exatos do `vercel.json` (o MCP fica em http://localhost:5173/mcp) e carrega as variáveis do `.env.local` no `process.env`, como a Vercel. Na primeira vez: `cp .env.example .env.local` e preencha `VITE_SUPABASE_PUBLISHABLE_KEY` com o `PUBLISHABLE_KEY` de `pnpm exec supabase status`.
 - Testar o MCP local com o Claude Code: `claude mcp add --transport http barber-local http://localhost:5173/mcp` (com `pnpm dev` e `pnpm db:start` rodando).
-- `pnpm test` / `pnpm test:watch`: testes unitários (Vitest, projeto `unit`), sem banco.
+- `pnpm test` / `pnpm test:watch`: testes unitários e do front (Vitest, projetos `unit` e `web`, este em jsdom), sem banco.
 - `pnpm test:db`: testes contra o Supabase local (projeto `db`, em `tests/db`), inclusive o de concorrência. Os arquivos rodam em paralelo: cada teste ou roda numa transação desfeita no fim, ou (quando precisa de várias conexões) grava dados com um prefixo de id só daquele arquivo e apaga no fim. O helper recusa qualquer banco que não seja local.
-- `pnpm db:start` / `db:stop` / `db:status`: Supabase local (precisa do Docker). Studio em http://127.0.0.1:54323.
+- `pnpm db:start` / `db:stop` / `db:status`: Supabase local (precisa do Docker). Sobe db, api, studio, realtime e auth (o auth só para o `supabase status` mostrar as chaves). Studio em http://127.0.0.1:54323.
 - `pnpm db:reset`: recria o banco local aplicando `supabase/migrations` e o `supabase/seed.sql`.
 - `pnpm typecheck`: servidor e front.
 - `pnpm lint`: oxlint (não imprime nada quando está tudo certo).
@@ -43,4 +44,6 @@ Projeto de portfólio: servidor MCP de agendamento de uma barbearia fictícia, a
 
 - https://mcp-barber-shop.vercel.app (MCP em `/mcp`). As funções rodam em São Paulo (`regions: ["gru1"]` no `vercel.json`), ao lado do Supabase em `sa-east-1`. Push na `main` gera deploy de produção; variável alterada no painel da Vercel só vale depois de um Redeploy.
 - Banco na nuvem pela CLI (depois de `pnpm exec supabase login`, uma vez por máquina; não pede a senha do banco): `pnpm exec supabase db push --remote --dry-run` para conferir e `pnpm exec supabase db push --remote --yes` para aplicar (`--include-seed` aplica o seed). SQL avulso: `pnpm exec supabase db query "..."` no banco local, ou com `--remote --read-only` na nuvem.
+- Front: `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY` cadastradas na Vercel como Config, não Secret (são públicas por design e vão no JavaScript da página; quem protege os dados é o RLS). O Vite as grava no build: só valem depois de um deploy novo.
+- Realtime do Supabase só com canais privados ("Allow public access" desligado em Realtime → Settings): a página ouve `agenda` e `inspector` pela política em `realtime.messages`.
 - `DATABASE_URL` de produção: Transaction pooler do Supabase (porta 6543), com a senha codificada por `encodeURIComponent`. Um símbolo cru na senha quebra a URL; o servidor recusa URL malformada com erro claro, sem mostrar o valor.
