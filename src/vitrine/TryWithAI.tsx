@@ -9,7 +9,7 @@ const cursorInstallLink = (url: string) =>
 
 type Client = { id: string; label: string; steps: (url: string) => ReactNode }
 
-// Claude and ChatGPT: the paths the owner followed on 12/11/2026. Cursor: its documentation (13/11/2026).
+// Claude and ChatGPT: the paths the owner followed (12 and 13/11/2026). Cursor: its documentation (13/11/2026).
 const CLIENTS: Client[] = [
   {
     id: 'claude',
@@ -22,7 +22,11 @@ const CLIENTS: Client[] = [
         <li>
           Clique em <b>Adicionar conector personalizado</b>, dê o nome MCP Barber Shop e cole o endereço acima.
         </li>
-        <li>Numa conversa, peça um horário. Reservar, remarcar e cancelar pedem a sua aprovação antes.</li>
+        <li>
+          Em <b>Autenticação</b>, marque <b>Sem login</b> e salve. O Claude vem com login (OAuth) marcado, e este
+          servidor não tem login.
+        </li>
+        <li>Numa conversa nova, peça um horário. Reservar, remarcar e cancelar pedem a sua aprovação antes.</li>
       </ol>
     ),
   },

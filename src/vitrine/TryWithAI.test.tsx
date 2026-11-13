@@ -31,6 +31,8 @@ describe('TryWithAI', () => {
     expect(tabs.map((t) => t.textContent)).toEqual(['Claude', 'ChatGPT', 'Cursor'])
     expect(screen.getByRole('tab', { name: 'Claude' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('tabpanel')).toHaveTextContent(/conector personalizado/i)
+    // Claude offers OAuth by default; this server has no login, so the visitor must pick "Sem login".
+    expect(screen.getByRole('tabpanel')).toHaveTextContent(/Autenticação.*Sem login/)
 
     await user.click(screen.getByRole('tab', { name: 'ChatGPT' }))
 
