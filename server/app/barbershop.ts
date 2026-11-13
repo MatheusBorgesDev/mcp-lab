@@ -150,19 +150,23 @@ export function createBarbershop({ sql, now = () => new Date(), rules = SHOP_RUL
       return stillContested(checks)
     },
 
-    async cancel(code: string): Promise<Result<Cancelled>> {
+    async cancel(code: string): Promise<Evaluated<Cancelled>> {
       const current = await findByCode(code)
-      if (!current) return notFound()
-      if (current.status === 'cancelled') return ok({ appointment: current, alreadyCancelled: true })
+      if (!current) return { ...notFound(), checks: [{ rule: 'appointment_exists', passed: false }] }
+      const exists: Check = { rule: 'appointment_exists', passed: true }
+      if (current.status === 'cancelled') return { ...ok({ appointment: current, alreadyCancelled: true }), checks: [exists] }
 
       const window = checkChangeWindow(current, now(), rules)
-      if (!window.ok) return window
+      const checks: Check[] = [exists, { rule: 'change_window', passed: window.ok }]
+      if (!window.ok) return { ...window, checks }
 
       const cancelled = await cancelAppointment(sql, current.id)
-      if (cancelled) return ok({ appointment: cancelled, alreadyCancelled: false })
+      if (cancelled) return { ...ok({ appointment: cancelled, alreadyCancelled: false }), checks }
       // Changed in the meantime (cancelled by a parallel request): report what is there now.
       const latest = await findByCode(code)
-      return latest ? ok({ appointment: latest, alreadyCancelled: latest.status === 'cancelled' }) : notFound()
+      return latest
+        ? { ...ok({ appointment: latest, alreadyCancelled: latest.status === 'cancelled' }), checks }
+        : { ...notFound(), checks }
     },
   }
 }

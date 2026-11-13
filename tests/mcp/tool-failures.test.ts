@@ -7,7 +7,7 @@ import { createMcpRequestHandler } from '../../server/mcp/server.js'
 
 // No database: the shop is a stub whose catalogue fails, to see what an unexpected error leaves in the log.
 async function connect(shop: Barbershop): Promise<Client> {
-  const handler = createMcpRequestHandler({ shop })
+  const handler = createMcpRequestHandler({ shop, events: async () => {} })
   const client = new Client({ name: 'test-client', version: '1.0.0' }, { versionNegotiation: { mode: { pin: '2026-07-28' } } })
   await client.connect(
     new StreamableHTTPClientTransport(new URL('http://barber.test/mcp'), { fetch: (url, init) => handler(new Request(url, init)) }),

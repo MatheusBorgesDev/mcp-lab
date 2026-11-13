@@ -123,6 +123,17 @@ describe('booking service', () => {
     expect(await shop.cancel(code)).toMatchObject({ ok: true, value: { alreadyCancelled: true } })
   })
 
+  it('reports the rules a cancel went through, for the inspector', async () => {
+    const { code } = await bookOrThrow(at(MONDAY, '10:00'))
+    const late = createBarbershop({ sql, now: () => at(MONDAY, '08:30') })
+    const exists = { rule: 'appointment_exists', passed: true }
+
+    expect(await shop.cancel('ZZZZZ-ZZZZZ')).toMatchObject({ checks: [{ rule: 'appointment_exists', passed: false }] })
+    expect(await late.cancel(code)).toMatchObject({ checks: [exists, { rule: 'change_window', passed: false }] })
+    expect(await shop.cancel(code)).toMatchObject({ ok: true, checks: [exists, { rule: 'change_window', passed: true }] })
+    expect(await shop.cancel(code)).toMatchObject({ ok: true, checks: [exists] })
+  })
+
   it('does not reschedule a cancelled appointment', async () => {
     const { code } = await bookOrThrow(at(MONDAY, '10:00'))
     await shop.cancel(code)

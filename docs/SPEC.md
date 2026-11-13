@@ -207,6 +207,13 @@ Cada chamada de tool gera um `request_id` e registra etapas em `mcp_events`, emi
 
 Nunca exibir IP, `ip_hash`, código de reserva completo nem nome do cliente.
 
+Como os eventos são gravados (fase 2):
+
+- Todas as etapas de uma chamada vão ao banco numa única escrita, no fim da chamada e antes da resposta. Cada etapa guarda o próprio horário e o tempo desde o início, para a página revelar uma a uma. Se a gravação falhar, a tool responde normalmente e o erro fica só no log.
+- Argumentos: só passam valores no formato que a tool espera (ids, datas, horários). Qualquer outro valor aparece como `•••`, porque pode ser texto livre digitado pelo visitante. Argumentos que as tools não recebem são descartados, e o evento informa só quantos foram. O código de reserva mostra os 2 primeiros caracteres (`R1•••-•••••`).
+- Regras verificadas: a primeira é sempre a validação da entrada; as seguintes vêm do domínio (reservar, remarcar, cancelar, consultar).
+- Rótulo do cliente: só nomes conhecidos aparecem (Claude, Claude Code, ChatGPT, Cursor, VS Code, Windsurf, Gemini, Zed, MCP Inspector); qualquer outro vira "Cliente MCP". O nome é autodeclarado, e a página é pública.
+
 ## 7. Página pública
 
 - Site simples da barbearia: serviços e preços, profissionais.

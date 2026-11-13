@@ -1,5 +1,6 @@
 import { createBarbershop } from '../server/app/barbershop.js'
 import { getSql } from '../server/db/client.js'
+import { insertEvents } from '../server/db/events.js'
 import { createMcpRequestHandler } from '../server/mcp/server.js'
 
 let handler: ((request: Request) => Promise<Response>) | undefined
@@ -8,7 +9,10 @@ let handler: ((request: Request) => Promise<Response>) | undefined
 // fails that request, not the module import.
 export default {
   fetch(request: Request): Promise<Response> {
-    handler ??= createMcpRequestHandler({ shop: createBarbershop({ sql: getSql() }) })
+    if (!handler) {
+      const sql = getSql()
+      handler = createMcpRequestHandler({ shop: createBarbershop({ sql }), events: (rows) => insertEvents(sql, rows) })
+    }
     return handler(request)
   },
 }

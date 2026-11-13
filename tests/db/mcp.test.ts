@@ -2,6 +2,7 @@ import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/cli
 import postgres from 'postgres'
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest'
 import { createBarbershop } from '../../server/app/barbershop.js'
+import { insertEvents } from '../../server/db/events.js'
 import { createMcpRequestHandler } from '../../server/mcp/server.js'
 import { connectLocalDb } from './helpers.js'
 
@@ -16,7 +17,7 @@ afterEach(() => sql`
 afterAll(() => sql.end())
 
 const NOW = new Date('2030-01-06T12:00:00-03:00')
-const handler = createMcpRequestHandler({ shop: createBarbershop({ sql, now: () => NOW }) })
+const handler = createMcpRequestHandler({ shop: createBarbershop({ sql, now: () => NOW }), events: async () => {} })
 
 async function connect(era: 'modern' | 'legacy' = 'modern', to = handler): Promise<Client> {
   const client = new Client(
@@ -137,7 +138,10 @@ describe('MCP server: read tools', () => {
 describe('MCP server: failures', () => {
   it('reports an unreachable database as INTERNAL_ERROR without internal details', async () => {
     const unreachable = postgres('postgresql://nobody:secret@127.0.0.1:1/none', { max: 1, connect_timeout: 2 })
-    const broken = createMcpRequestHandler({ shop: createBarbershop({ sql: unreachable, now: () => NOW }) })
+    const broken = createMcpRequestHandler({
+      shop: createBarbershop({ sql: unreachable, now: () => NOW }),
+      events: async () => {},
+    })
     const errors: unknown[] = []
     const originalError = console.error
     console.error = (...args: unknown[]) => errors.push(args)
@@ -156,17 +160,17 @@ describe('MCP server: failures', () => {
   })
 })
 
+// Monday 2030-01-07 at 09:00 only Lucas works (Diego starts at 11:00), so the shop picks him.
+const NINE = '2030-01-07T09:00:00-03:00'
+
+async function book(client: Client, args: Record<string, unknown> = {}) {
+  const booked = await call(client, 'book_appointment', { service_id: 'corte-masculino', start: NINE, ...args })
+  if (booked.isError) throw new Error(`booking failed: ${JSON.stringify(booked.data)}`)
+  return booked.data as { code: string; appointment: Structured & { id: string }; watch_url: string }
+}
+
 describe('MCP server: write tools', () => {
   afterEach(() => vi.unstubAllEnvs())
-
-  // Monday 2030-01-07 at 09:00 only Lucas works (Diego starts at 11:00), so the shop picks him.
-  const NINE = '2030-01-07T09:00:00-03:00'
-
-  async function book(client: Client, args: Record<string, unknown> = {}) {
-    const booked = await call(client, 'book_appointment', { service_id: 'corte-masculino', start: NINE, ...args })
-    if (booked.isError) throw new Error(`booking failed: ${JSON.stringify(booked.data)}`)
-    return booked.data as { code: string; appointment: Structured & { id: string }; watch_url: string }
-  }
 
   it('advertises booking and rescheduling as writes and cancelling as destructive', async () => {
     const { tools } = await (await connect()).listTools()
@@ -270,3 +274,89 @@ describe('MCP server: write tools', () => {
   })
 })
 
+describe('MCP server: inspector events', () => {
+  // A handler that writes events to the database, remembering each call's request id to read and delete them.
+  const requestIds = new Set<string>()
+  const inspected = createMcpRequestHandler({
+    shop: createBarbershop({ sql, now: () => NOW }),
+    events: async (rows) => {
+      for (const row of rows) requestIds.add(row.requestId)
+      await insertEvents(sql, rows)
+    },
+  })
+  afterEach(async () => {
+    if (requestIds.size > 0) await sql`delete from mcp_events where request_id in ${sql([...requestIds])}`
+    requestIds.clear()
+  })
+
+  const stored = () => sql<Array<{ tool_name: string; step: string; detail: Structured; client_label: string }>>`
+    select tool_name, step, detail, client_label from mcp_events where request_id in ${sql([...requestIds])} order by id
+  `
+
+  it('records a booking: the arguments without the name, the checks it passed and the masked code', async () => {
+    const client = await connect('modern', inspected)
+
+    const { code, appointment } = await book(client, { client_name: 'Maria Privada' })
+
+    const rows = await stored()
+    expect(rows.map((r) => r.step)).toEqual(['received', 'validated', 'processed', 'responded'])
+    expect(rows.every((r) => r.tool_name === 'book_appointment' && r.client_label === 'Cliente MCP')).toBe(true)
+    expect(rows[0]?.detail).toEqual({ args: { service_id: 'corte-masculino', start: NINE }, redacted: ['client_name'] })
+    // No professional chosen: the shop picks among those who do the service, so that rule is not checked.
+    expect(rows[1]?.detail.checks).toEqual(
+      ['input', 'service_exists', 'on_slot_grid', 'min_advance', 'max_days_ahead', 'within_working_hours', 'slot_free']
+        .map((rule) => ({ rule, passed: true })),
+    )
+    expect(rows[2]?.detail).toEqual({
+      kind: 'booked',
+      code: `${code.slice(0, 2)}•••-•••••`,
+      appointment: {
+        id: appointment.id,
+        professional_id: 'lucas',
+        service_id: 'corte-masculino',
+        starts_at: '2030-01-07T12:00:00.000Z',
+        ends_at: '2030-01-07T12:30:00.000Z',
+        status: 'confirmed',
+        public_alias: appointment.public_alias,
+      },
+    })
+    expect(rows[3]?.detail).toEqual({ is_error: false })
+  })
+
+  it('records a refusal with the failed check and the suggested times', async () => {
+    const client = await connect('modern', inspected)
+    await book(client)
+    requestIds.clear()
+
+    await call(client, 'book_appointment', { service_id: 'corte-masculino', start: NINE, professional_id: 'lucas' })
+
+    const rows = await stored()
+    expect(rows.map((r) => r.step)).toEqual(['received', 'validated', 'processed', 'responded'])
+    expect(rows[1]?.detail.checks).toContainEqual({ rule: 'slot_free', passed: false })
+    expect(rows[2]?.detail).toMatchObject({
+      kind: 'refused',
+      code: 'SLOT_UNAVAILABLE',
+      suggestions: [{ start: '2030-01-07T09:30:00-03:00', professional_id: 'lucas' }, {}, {}],
+    })
+  })
+
+  it('never stores the client name or the booking code, in any call that used them (privacy guard)', async () => {
+    const client = await connect('modern', inspected)
+    const { code } = await book(client, { client_name: 'Maria Privada' })
+    await call(client, 'get_appointment', { code })
+    await call(client, 'reschedule_appointment', { code, new_start: '2030-01-07T10:00:00-03:00' })
+    // Typed the way a person might, to check the masking does not depend on the format.
+    await call(client, 'cancel_appointment', { code: code.toLowerCase().replace('-', ' ') })
+
+    const rows = await stored()
+    expect(new Set(rows.map((r) => r.tool_name))).toEqual(
+      new Set(['book_appointment', 'get_appointment', 'reschedule_appointment', 'cancel_appointment']),
+    )
+    const text = JSON.stringify(rows)
+    const hidden = code.replace('-', '').slice(2)
+    for (const secret of ['Maria Privada', 'Maria', code, code.replace('-', ''), hidden, code.slice(6)]) {
+      expect(text, secret).not.toContain(secret)
+    }
+    expect(text.toUpperCase()).not.toContain(hidden)
+  })
+})

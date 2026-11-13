@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { generateCode, hashCode, normalizeCode } from '../../server/security/codes.js'
+import { generateCode, hashCode, maskCode, normalizeCode } from '../../server/security/codes.js'
 
 describe('booking codes', () => {
   it('generates 10 Crockford base32 characters in two groups', () => {
@@ -28,5 +28,19 @@ describe('booking codes', () => {
   it('hashes the normalized code with SHA-256', () => {
     // echo -n K7M2Q9XH4T | sha256sum
     expect(hashCode('K7M2Q9XH4T')).toBe('bea55e799a5bbfaceb774b9213227ebf71de7fb255c6d89160ce1f8fe7debf72')
+  })
+})
+
+describe('masked booking codes (public inspector)', () => {
+  it('keeps only the first two characters, in the printed format', () => {
+    expect(maskCode('R1ZWJ-8QM7W')).toBe('R1•••-•••••')
+  })
+
+  it('masks what the visitor typed in its canonical form', () => {
+    expect(maskCode(' r1zwj8qm7w ')).toBe('R1•••-•••••')
+  })
+
+  it.each(['João Silva', 'R1', '', 'R1ZWJ-8QM7W-EXTRA'])('hides every character of something that is not a code: %j', (input) => {
+    expect(maskCode(input)).toBe('•••••-•••••')
   })
 })

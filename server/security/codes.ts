@@ -25,3 +25,12 @@ export function normalizeCode(input: string): string | null {
 export function hashCode(normalized: string): string {
   return createHash('sha256').update(normalized).digest('hex')
 }
+
+/**
+ * The code as the public inspector shows it: the first two characters, enough for visitors to recognize their
+ * own call, in the printed format. Anything that is not a code is hidden entirely.
+ */
+export function maskCode(input: string): string {
+  const normalized = normalizeCode(input)
+  return normalized ? `${normalized.slice(0, 2)}•••-•••••` : '•••••-•••••'
+}
