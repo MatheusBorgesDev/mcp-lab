@@ -235,7 +235,7 @@ function SlotItem({ slot, at, isTarget }: { slot: Slot; at: number; isTarget: bo
         {slot.flash === 'freed' && ' (acabou de ser liberado)'}
         {isTarget && ' (sua reserva)'}
       </span>
-      <span aria-hidden="true">
+      <span className={styles.text} aria-hidden="true">
         <b>{slot.alias.replace(/^Cliente /, '')}</b> {slot.service}
       </span>
       {isTarget && (
