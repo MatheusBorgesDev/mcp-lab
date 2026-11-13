@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "regions": ["gru1"],
-  "rewrites": [{ "source": "/mcp", "destination": "/api/mcp" }]
+  "rewrites": [{ "source": "/mcp", "destination": "/api/mcp" }],
+  "crons": [{ "path": "/api/cron/reset", "schedule": "0 6 * * *" }]
 }

@@ -8,5 +8,6 @@ export const INSTRUCTIONS = [
   '- Bookings need 2 hours of notice and open up to 14 days ahead. Rescheduling and cancelling are allowed up to 2 hours before the start.',
   '- After booking, show the booking code to the user and ask them to keep it: it is the only way to view, reschedule or cancel. Also offer the watch_url, where they can see the booking on the live agenda.',
   '- Do not ask for personal data. client_name is optional and never shown publicly.',
+  '- The demo resets every day at 03:00 (America/Sao_Paulo): visitor bookings are deleted. When a booking is for a later day, tell the user it will be gone by then.',
   '- Shop content (service names, prices in BRL) is in Portuguese; answer in the user\'s language.',
 ].join('\n')

@@ -1,5 +1,6 @@
 import type postgres from 'postgres'
 import { z } from 'zod'
+import type { SeedAppointment } from '../domain/seed.js'
 import type { LocalDate } from '../domain/time.js'
 
 /** An appointment as the server shows it to its owner. Never carries the client name, IP or code. */
@@ -168,4 +169,56 @@ export async function cancelAppointment(sql: postgres.Sql, id: string): Promise<
     ${withNames(sql)}
   `
   return toAppointment(rows)
+}
+
+/**
+ * Holds every other write to appointments until the end of the transaction; reads go on. The daily reset takes
+ * it first: a booking made meanwhile waits, then plans against the new agenda instead of racing the reset.
+ */
+export async function lockAppointmentWrites(tx: postgres.TransactionSql): Promise<void> {
+  await tx`lock table appointments in share row exclusive mode`
+}
+
+/** Deletes every visitor booking, past or future, with its name and visitor key. */
+export async function deleteVisitorAppointments(tx: postgres.TransactionSql): Promise<number> {
+  return (await tx`delete from appointments where source = 'visitor'`).count
+}
+
+/**
+ * Makes the shop's own bookings from `from` on match `seeds`: drops the ones not there, adds the missing ones.
+ * The key is the row's code hash, so a booking already written is left as it is.
+ */
+export async function syncSeedAppointments(
+  tx: postgres.TransactionSql,
+  seeds: readonly SeedAppointment[],
+  from: Date,
+): Promise<{ removed: number; added: number }> {
+  const removed = await tx`
+    delete from appointments
+    where source = 'seed' and starts_at >= ${from} and code_hash <> all(${seeds.map((s) => s.key)}::text[])
+  `
+  if (seeds.length === 0) return { removed: removed.count, added: 0 }
+  const rows = seeds.map((s) => ({
+    code_hash: s.key,
+    professional_id: s.professionalId,
+    service_id: s.serviceId,
+    starts_at: s.startsAt,
+    ends_at: s.endsAt,
+    public_alias: s.publicAlias,
+    source: 'seed',
+  }))
+  const added = await tx`
+    insert into appointments
+    ${tx(rows, 'code_hash', 'professional_id', 'service_id', 'starts_at', 'ends_at', 'public_alias', 'source')}
+    on conflict (code_hash) do nothing
+  `
+  return { removed: removed.count, added: added.count }
+}
+
+/** Marks the confirmed bookings that ended by `now` as completed. */
+export async function completeEndedAppointments(tx: postgres.TransactionSql, now: Date): Promise<number> {
+  return (await tx`
+    update appointments set status = 'completed', updated_at = now()
+    where status = 'confirmed' and ends_at <= ${now}
+  `).count
 }

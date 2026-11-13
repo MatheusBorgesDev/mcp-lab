@@ -53,6 +53,7 @@ Objetivos:
 | Antecedência mínima para cancelar ou remarcar | 2 horas |
 | Reservas ativas por visitante (IP; não vale para IPs de plataformas de IA, ver seção 2) | 2 |
 | Ocupação máxima do dia para aceitar reserva de visitante (conta todas as reservas, inclusive as fictícias) | 70% dos horários |
+| Ocupação das reservas fictícias, recriadas pelo cron diário (seção 9) | cerca de 30% dos horários de cada dia |
 | Sugestões quando o horário não está livre | 3 horários mais próximos |
 
 Regras adicionais:
@@ -166,7 +167,7 @@ create view public_agenda as
 ## 5. Servidor MCP
 
 - Endpoint: `/mcp` (rewrite para `api/mcp.ts`; sem estado, sem autenticação; protocolo 2026-07-28 com fallback para Streamable HTTP da geração 2025).
-- `instructions` do servidor: apresentar a barbearia, informar o fuso horário, orientar a IA a consultar disponibilidade antes de reservar, nunca inventar serviços ou preços, mostrar o código de reserva ao usuário (pedindo que ele guarde) e oferecer o link da agenda ao vivo.
+- `instructions` do servidor: apresentar a barbearia, informar o fuso horário, orientar a IA a consultar disponibilidade antes de reservar, nunca inventar serviços ou preços, mostrar o código de reserva ao usuário (pedindo que ele guarde), oferecer o link da agenda ao vivo e avisar que a agenda reinicia todo dia às 3h (reserva para outro dia some antes de acontecer).
 
 ### Tools
 
@@ -259,6 +260,12 @@ Executa por volta das 03:00 de Brasília (06:00 UTC):
 2. Recria as reservas fictícias (`seed`) para os próximos dias.
 3. Marca como `completed` as reservas que já passaram.
 4. Apaga `mcp_events` com mais de 7 dias.
+
+Como funciona (fase 3):
+
+- Vercel Cron com `0 6 * * *` no `vercel.json`. No plano Hobby roda uma vez por dia, em algum momento dentro dessa hora. A Vercel chama `GET /api/cron/reset` com `Authorization: Bearer <CRON_SECRET>`; sem o segredo, a resposta é 401 e o banco nem é tocado.
+- As reservas fictícias cobrem a janela de reserva (hoje e os 14 dias seguintes). Uma função pura as sorteia com semente na data: o mesmo dia gera sempre as mesmas reservas, então cada execução só acrescenta o novo último dia, e rodar duas vezes não muda nada. Elas seguem as regras de um visitante (serviço que o profissional faz, expediente, grade de 15 minutos, bloqueios), têm apelido `Cliente #NNNN` como o de um visitante e não têm código: ninguém consegue ver, remarcar ou cancelar uma delas.
+- Tudo numa transação, que começa travando as escritas em `appointments` (leituras continuam): uma reserva feita no meio da limpeza espera e depois planeja sobre a agenda nova.
 
 ## 10. Testes
 

@@ -151,10 +151,18 @@ describe('Agenda', () => {
     expect(screen.getByRole('button', { name: 'Amanhã' })).toHaveAttribute('aria-pressed', 'true')
   })
 
-  it('says so when the appointment in the link is no longer on the agenda', async () => {
+  it('says so when the appointment in the link is no longer on the agenda, the daily reset included', async () => {
     renderAgenda(source(), fakeRealtime(), 'gone')
 
-    expect(await screen.findByText(/não está mais na agenda/)).toBeInTheDocument()
+    expect(await screen.findByText(/não está mais na agenda/)).toHaveTextContent(/limpeza diária das 3h/)
+  })
+
+  it('tells visitors that the agenda resets every day at 3h', async () => {
+    renderAgenda(source())
+
+    expect(await screen.findByText(/Todo dia às 3h a agenda reinicia/)).toHaveTextContent(
+      'as reservas dos visitantes são apagadas e as fictícias, refeitas',
+    )
   })
 
   it('says the agenda is unavailable without a data source', () => {

@@ -11,6 +11,8 @@ export const SHOP_RULES = {
   /** Visitors book only while the day stays at or below this share of its working minutes, fictitious
    * appointments included: the rest stays free for the next visitor. */
   maxDailyOccupancyPercent: 70,
+  /** Share of each day's working minutes the daily reset fills with the shop's own (fictitious) bookings. */
+  seedOccupancyPercent: 30,
 } as const
 
 export type ShopRules = typeof SHOP_RULES

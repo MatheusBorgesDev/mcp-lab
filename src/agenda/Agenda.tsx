@@ -150,10 +150,15 @@ export function Agenda({ source, targetId }: { source: AgendaSource | null; targ
             </div>
           )}
           {target === 'missing' && (
-            <p className={styles.note}>A reserva do link não está mais na agenda: foi cancelada ou já passou.</p>
+            <p className={styles.note}>
+              A reserva do link não está mais na agenda: foi cancelada, já passou ou saiu na limpeza diária das 3h.
+            </p>
           )}
           {layout ? <DayGrid layout={layout} targetId={target === 'found' ? targetId : null} /> : <p className={styles.note}>Carregando…</p>}
           <Legend />
+          <p className={styles.reset}>
+            Todo dia às 3h a agenda reinicia: as reservas dos visitantes são apagadas e as fictícias, refeitas.
+          </p>
           <Feed entries={feed} />
         </>
       )}

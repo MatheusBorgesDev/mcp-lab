@@ -12,12 +12,12 @@ import {
 } from '../db/appointments.js'
 import { isSlotConflict } from '../db/client.js'
 import { loadCatalog, loadSchedule, type Catalog } from '../db/schedule.js'
-import { findAvailability, type Availability, type AvailabilityQuery } from '../domain/availability.js'
+import { bookingWindow, findAvailability, type Availability, type AvailabilityQuery } from '../domain/availability.js'
 import { checkChangeWindow, planBooking, type Check, type CheckRule, type Evaluated } from '../domain/booking.js'
 import { checkDailyCapacity, checkVisitorBookings, dayCapacityMinutes } from '../domain/limits.js'
 import { fail, ok, type Failure, type Result } from '../domain/result.js'
 import { SHOP_RULES, type ShopRules } from '../domain/rules.js'
-import { addDays, dayBounds, toZoned, zonedToInstant } from '../domain/time.js'
+import { dayBounds, toZoned } from '../domain/time.js'
 import type { Schedule } from '../domain/types.js'
 import { generateCode, hashCode, normalizeCode } from '../security/codes.js'
 import type { Visitor } from '../security/ip.js'
@@ -99,15 +99,6 @@ function dailyCapacityGate(
         rules,
       ),
   ]
-}
-
-/** Bookable range: from the start of today to the end of the last bookable day, in shop time. */
-function bookingWindow(now: Date, rules: ShopRules) {
-  const today = toZoned(now, rules.timeZone).date
-  return {
-    from: zonedToInstant(today, 0, rules.timeZone),
-    to: zonedToInstant(addDays(today, rules.maxDaysAhead + 1), 0, rules.timeZone),
-  }
 }
 
 /** The use cases behind the MCP tools: domain rules plus the database. */

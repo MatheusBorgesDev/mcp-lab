@@ -56,6 +56,15 @@ export function resolveCandidates(
   return ok({ service, professionals: [professional] })
 }
 
+/** Bookable range: from the start of today to the end of the last bookable day, in shop time. */
+export function bookingWindow(now: Date, rules: ShopRules = SHOP_RULES): { from: Date; to: Date } {
+  const today = toZoned(now, rules.timeZone).date
+  return {
+    from: zonedToInstant(today, 0, rules.timeZone),
+    to: zonedToInstant(addDays(today, rules.maxDaysAhead + 1), 0, rules.timeZone),
+  }
+}
+
 /** Bookable dates go from today (shop time) up to `maxDaysAhead` days ahead. */
 export function checkDateWindow(date: LocalDate, now: Date, rules: ShopRules = SHOP_RULES): Result<void> {
   const today = toZoned(now, rules.timeZone).date

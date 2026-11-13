@@ -21,3 +21,8 @@ export async function insertEvents(sql: postgres.Sql | postgres.TransactionSql, 
     ${sql(values, 'request_id', 'tool_name', 'step', 'detail', 'duration_ms', 'client_label', 'created_at')}
   `
 }
+
+/** Deletes the inspector events written before `cutoff`. */
+export async function deleteEventsBefore(tx: postgres.TransactionSql, cutoff: Date): Promise<number> {
+  return (await tx`delete from mcp_events where created_at < ${cutoff}`).count
+}

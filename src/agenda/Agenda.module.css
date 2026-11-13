@@ -371,6 +371,12 @@
   background: var(--brass);
 }
 
+.reset {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
 .feed {
   margin-top: 14px;
   padding-top: 10px;
