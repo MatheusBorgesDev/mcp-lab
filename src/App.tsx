@@ -1,5 +1,8 @@
 import styles from './App.module.css'
 import { SiteHeader } from './site/SiteHeader'
+import { Menu } from './vitrine/Menu'
+import { ShopFacts } from './vitrine/ShopFacts'
+import { TryWithAI } from './vitrine/TryWithAI'
 
 export default function App() {
   return (
@@ -19,10 +22,9 @@ export default function App() {
               Conecte a MCP Barber Shop no Claude, no ChatGPT ou no Cursor e peça um horário conversando. A agenda é a
               mesma para todo mundo, e cada chamada aparece no inspector enquanto acontece.
             </p>
+            <ShopFacts />
           </div>
-          <section id="teste" aria-labelledby="teste-titulo" className={styles.try}>
-            <h2 id="teste-titulo">Teste com a sua IA</h2>
-          </section>
+          <TryWithAI />
         </div>
 
         <div className={styles.live}>
@@ -36,17 +38,12 @@ export default function App() {
           </section>
         </div>
 
-        <div className={styles.menu}>
-          <section id="servicos" aria-labelledby="servicos-titulo">
-            <h2 id="servicos-titulo">Serviços</h2>
-          </section>
-          <section id="equipe" aria-labelledby="equipe-titulo">
-            <h2 id="equipe-titulo">Equipe</h2>
-          </section>
-        </div>
+        <Menu />
       </main>
       <footer className={styles.footer}>
-        <p className="wrap">Barbearia fictícia, servidor MCP de verdade. Um projeto de portfólio.</p>
+        <div className="wrap">
+          <p>Barbearia fictícia, servidor MCP de verdade. Um projeto de portfólio.</p>
+        </div>
       </footer>
     </>
   )

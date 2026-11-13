@@ -10,6 +10,8 @@ import '@fontsource/ibm-plex-mono/600.css'
 import './styles/tokens.css'
 import './styles/global.css'
 import App from './App.tsx'
+import { loadCatalog } from './data/catalog.ts'
+import { CatalogProvider } from './data/CatalogProvider.tsx'
 import { createSupabase } from './lib/supabase.ts'
 import { createLiveConnection } from './live/connection.ts'
 import { LiveProvider } from './live/LiveProvider.tsx'
@@ -23,11 +25,14 @@ if (!supabase && import.meta.env.DEV) {
 }
 // One live connection for the life of the page.
 const live = createLiveConnection(supabase)
+const loadShopCatalog = supabase ? () => loadCatalog(supabase) : null
 
 createRoot(root).render(
   <StrictMode>
     <LiveProvider connection={live}>
-      <App />
+      <CatalogProvider load={loadShopCatalog}>
+        <App />
+      </CatalogProvider>
     </LiveProvider>
   </StrictMode>,
 )

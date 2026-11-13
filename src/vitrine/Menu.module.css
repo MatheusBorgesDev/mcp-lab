@@ -1,0 +1,116 @@
+.menu {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 36px;
+  padding-block: 44px;
+}
+
+.title {
+  margin: 0 0 12px;
+  font-weight: 700;
+  font-size: 26px;
+}
+
+.note {
+  margin: 0;
+  color: var(--ink-2);
+}
+
+.prices {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.prices li {
+  padding: 7px 0;
+}
+
+.line {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.name {
+  font-family: var(--display);
+  font-variation-settings: "SOFT" 100, "WONK" 1;
+  font-size: 18.5px;
+  font-weight: 500;
+}
+
+/* The dotted line of a price board, between the name and the price. */
+.leader {
+  flex: 1;
+  min-width: 16px;
+  border-bottom: 2px dotted var(--rule);
+  transform: translateY(-5px);
+}
+
+.duration {
+  font: 500 12px var(--mono);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.price {
+  min-width: 64px;
+  text-align: right;
+  font-family: var(--display);
+  font-variation-settings: "SOFT" 100, "WONK" 1;
+  font-weight: 800;
+  font-size: 19px;
+  white-space: nowrap;
+}
+
+.description {
+  margin: 1px 0 0;
+  max-width: 52ch;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+
+.team {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.pro {
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.pro h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.pro p {
+  margin: 2px 0 6px;
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: var(--ink-2);
+}
+
+.days {
+  font: 500 11.5px var(--mono);
+  color: var(--green-text);
+}
+
+@media (max-width: 1000px) {
+  .menu {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 520px) {
+  .team {
+    grid-template-columns: 1fr;
+  }
+}

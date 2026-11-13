@@ -1,6 +1,6 @@
 .hero {
   display: grid;
-  grid-template-columns: 1.15fr 1fr;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
   gap: 40px;
   align-items: start;
   padding-block: 44px 36px;
@@ -28,21 +28,9 @@
   color: var(--ink-2);
 }
 
-.try {
-  border: 1.5px solid var(--ink);
-  border-radius: 16px;
-  padding: 20px;
-}
-
-.try h2 {
-  margin: 0;
-  font-weight: 700;
-  font-size: 24px;
-}
-
 .live {
   display: grid;
-  grid-template-columns: 1.55fr 1fr;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
   gap: 20px;
   align-items: start;
 }
@@ -54,8 +42,7 @@
 }
 
 .agenda h2,
-.inspector h2,
-.menu h2 {
+.inspector h2 {
   margin: 0;
   font-weight: 700;
   font-size: 24px;
@@ -81,13 +68,6 @@
   color: var(--chalk-2);
 }
 
-.menu {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 36px;
-  padding-block: 40px;
-}
-
 .footer {
   padding-block: 24px 40px;
   border-top: 1px solid var(--rule);
@@ -101,8 +81,7 @@
 
 @media (max-width: 1000px) {
   .hero,
-  .live,
-  .menu {
-    grid-template-columns: 1fr;
+  .live {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

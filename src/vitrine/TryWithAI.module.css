@@ -1,0 +1,146 @@
+.try {
+  position: relative;
+  border: 1.5px solid var(--ink);
+  border-radius: 16px;
+  padding: 20px;
+  background: var(--paper);
+}
+
+/* The rubber stamp in the corner. */
+.stamp {
+  position: absolute;
+  top: -12px;
+  right: 18px;
+  margin: 0;
+  padding: 2px 8px;
+  transform: rotate(3deg);
+  border: 1.5px solid var(--red);
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--red);
+  font: 600 10.5px var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0 0 12px;
+  font-weight: 700;
+  font-size: 24px;
+}
+
+.address {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 6px 6px 12px;
+  border-radius: 10px;
+  background: var(--paper-2);
+}
+
+.address code {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 500 13px var(--mono);
+}
+
+.copy {
+  flex: none;
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--green);
+  color: var(--on-green);
+  font: 600 13px var(--text);
+  cursor: pointer;
+}
+
+.copy:hover {
+  filter: brightness(1.1);
+}
+
+.copied {
+  min-height: 1.4em;
+  margin: 4px 0 0 12px;
+  font: 500 12px var(--mono);
+  color: var(--green-text);
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin: 6px 0 10px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.tabs button {
+  margin-bottom: -1px;
+  padding: 8px 10px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--ink-2);
+  font: 600 13.5px var(--text);
+  cursor: pointer;
+}
+
+.tabs button[aria-selected="true"] {
+  color: var(--ink);
+  border-bottom-color: var(--red);
+}
+
+.steps {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 14px;
+}
+
+.steps li {
+  margin: 4px 0;
+}
+
+.steps li::marker {
+  font-family: var(--mono);
+  color: var(--red);
+}
+
+.install {
+  font-weight: 600;
+  color: var(--green-text);
+}
+
+.code {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  overflow-x: auto;
+  border-radius: 8px;
+  background: var(--paper-2);
+  font: 500 12px/1.5 var(--mono);
+}
+
+.prompts {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--brass);
+  border-radius: 0 8px 8px 0;
+  background: color-mix(in srgb, var(--brass) 10%, transparent);
+}
+
+.prompts p {
+  margin: 0 0 2px;
+  font-size: 10.5px;
+}
+
+.prompts ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+
+.prompts li + li {
+  margin-top: 4px;
+}
