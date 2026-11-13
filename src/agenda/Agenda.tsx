@@ -197,7 +197,7 @@ function DayGrid({ layout, targetId }: { layout: ReturnType<typeof dayLayout>; t
                   aria-hidden="true"
                   style={{ '--at': at(b.startMin), '--len': rows(b.endMin - b.startMin) } as CSSProperties}
                 >
-                  {b.label}
+                  {b.label && <span>{b.label}</span>}
                 </div>
               ))}
               <ul aria-label={c.professional.name} className={styles.slots}>

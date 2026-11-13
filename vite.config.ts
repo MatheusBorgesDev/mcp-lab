@@ -5,6 +5,20 @@ import { vercelApiDev } from './dev/vercel-api-plugin.js'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), vercelApiDev()],
+  build: {
+    rolldownOptions: {
+      output: {
+        // Libraries in their own files: they change less often than the page, so browsers keep them cached
+        // across deploys, and no single file passes Vite's 500 kB warning.
+        codeSplitting: {
+          groups: [
+            { name: 'react', test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/ },
+            { name: 'supabase', test: /node_modules[\\/](@supabase|tslib|@noble)[\\/]/ },
+          ],
+        },
+      },
+    },
+  },
   test: {
     environment: 'node',
     projects: [

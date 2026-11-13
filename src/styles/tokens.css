@@ -13,6 +13,8 @@
   --on-green: #f4eddf;
   --red: #b23a2c;
   --brass: #c8963e;
+  /* Focus ring: at least 3:1 against the paper (brass on light paper is only 2.3:1). */
+  --focus: #1f1a14;
 
   /* The inspector is a dark board in both themes. */
   --board: #0f2219;
@@ -52,6 +54,7 @@
     --green-wash: #1d2c23;
     --red: #e46b5d;
     --brass: #d9a84e;
+    --focus: #d9a84e;
     --board: #0b1a13;
     --board-2: #12281d;
     --board-line: #21402f;
@@ -71,6 +74,7 @@
   --green-wash: #1d2c23;
   --red: #e46b5d;
   --brass: #d9a84e;
+  --focus: #d9a84e;
   --board: #0b1a13;
   --board-2: #12281d;
   --board-line: #21402f;

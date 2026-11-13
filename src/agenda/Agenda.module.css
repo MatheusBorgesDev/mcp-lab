@@ -177,12 +177,23 @@
   text-transform: uppercase;
 }
 
+/* The label sits on plain paper: text straight on the hatching would fall below 4.5:1. */
+.block span {
+  max-width: calc(100% - 8px);
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--paper);
+}
+
 .block[data-kind="outside"] {
   opacity: 0.6;
 }
 
+/* Opaque: a closure covers the breaks and hours drawn under it. */
 .block[data-kind="closed"] {
-  background: repeating-linear-gradient(45deg, color-mix(in srgb, var(--red) 16%, transparent) 0 5px, transparent 5px 10px);
+  background:
+    repeating-linear-gradient(45deg, color-mix(in srgb, var(--red) 16%, transparent) 0 5px, transparent 5px 10px),
+    var(--paper);
   color: var(--red);
 }
 
