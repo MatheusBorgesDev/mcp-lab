@@ -5,6 +5,7 @@ import type { z } from 'zod'
 import type { Barbershop } from '../app/barbershop.js'
 import { formatZoned } from '../domain/time.js'
 import type { Visitor } from '../security/ip.js'
+import type { CallKind, RateLimiter } from '../security/rate-limit.js'
 import { clientLabel } from '../events/client-label.js'
 import { booked, publicAppointment } from '../events/outcomes.js'
 import { startTrace, type EventRow, type Trace } from '../events/trace.js'
@@ -14,6 +15,7 @@ import {
   formatMinutes,
   formatPrice,
   invalidInput,
+  rateLimited,
   startRanges,
   success,
   WEEKDAY_NAMES,
@@ -28,6 +30,8 @@ export type ToolDeps = {
   events: EventSink
   /** Who a request comes from, for the per-visitor limits (server/security/ip.ts in production). */
   identifyVisitor: (request: Request | undefined) => Visitor
+  /** Tool calls per visitor (server/security/rate-limit.ts). */
+  rateLimit: RateLimiter
 }
 
 /**
@@ -45,20 +49,30 @@ type ToolConfig = { title: string; description: string; annotations: ToolAnnotat
 type Run<S extends z.ZodType> = (input: z.output<S>, ctx: ServerContext, trace: Trace) => Promise<CallToolResult>
 
 /**
- * Registers a tool that validates its arguments with `schema`, then runs. Unexpected errors (database down,
- * a bug) are logged on the server and reach the AI only as INTERNAL_ERROR, without internal details.
- * Every call is traced for the inspector and its steps written before the answer; a failure to write them
- * is logged and never changes the answer.
+ * Registers a tool that checks the caller's rate limit, validates its arguments with `schema`, then runs. A
+ * tool not marked read-only counts as a write. Unexpected errors (database down, a bug) are logged on the
+ * server and reach the AI only as INTERNAL_ERROR, without internal details. Every call is traced for the
+ * inspector and its steps written before the answer; a failure to write them is logged and never changes
+ * the answer.
  */
 function defineTool<S extends z.ZodType>(
   server: McpServer,
-  { shop, events }: ToolDeps,
+  { shop, events, identifyVisitor, rateLimit }: ToolDeps,
   name: string,
   config: ToolConfig,
   schema: S,
   run: Run<S>,
 ): void {
   const { timeZone } = shop.rules
+  const kind: CallKind = config.annotations.readOnlyHint ? 'read' : 'write'
+
+  async function record(trace: Trace): Promise<void> {
+    try {
+      await events(trace.rows())
+    } catch (error) {
+      console.error('[mcp] event log failed', describeError(error))
+    }
+  }
 
   async function execute(args: unknown, ctx: ServerContext, trace: Trace): Promise<CallToolResult> {
     try {
@@ -85,12 +99,17 @@ function defineTool<S extends z.ZodType>(
         userAgent: ctx.http?.req?.headers.get('user-agent'),
       }),
     })
-    const result = await execute(args, ctx, trace)
-    try {
-      await events(trace.rows())
-    } catch (error) {
-      console.error('[mcp] event log failed', describeError(error))
+    const verdict = await rateLimit(identifyVisitor(ctx.http?.req), kind)
+    trace.checked([{ rule: 'rate_limit', passed: verdict.allowed }])
+    if (!verdict.allowed) {
+      const refused = rateLimited(verdict.retryAfterSec)
+      trace.responded(refused)
+      // Only the first refusal of a window reaches the public inspector: a script cannot flood it.
+      if (verdict.firstRefusal) await record(trace)
+      return refused
     }
+    const result = await execute(args, ctx, trace)
+    await record(trace)
     return result
   })
 }

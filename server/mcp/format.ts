@@ -67,6 +67,16 @@ export function failure(error: DomainError, timeZone: string): CallToolResult {
   }
 }
 
+/** A call over the rate limit (server/security/rate-limit.ts): the AI learns how long to wait. */
+export function rateLimited(retryAfterSec: number): CallToolResult {
+  const message = `Too many calls in a short time. Try again in ${retryAfterSec} seconds.`
+  return {
+    isError: true,
+    content: [{ type: 'text', text: `RATE_LIMITED: ${message}` }],
+    structuredContent: { code: 'RATE_LIMITED', message, retry_after_seconds: retryAfterSec },
+  }
+}
+
 export function invalidInput(error: z.ZodError, timeZone: string): CallToolResult {
   const details = error.issues
     .map((issue) => `${issue.path.length > 0 ? issue.path.join('.') : 'input'}: ${issue.message}`)

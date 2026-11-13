@@ -83,6 +83,7 @@ describe('ticketView', () => {
       call([
         step('validated', {
           checks: [
+            { rule: 'rate_limit', passed: true },
             { rule: 'visitor_bookings', passed: true },
             { rule: 'daily_capacity', passed: false },
           ],
@@ -92,6 +93,7 @@ describe('ticketView', () => {
     )
 
     expect(view.steps[0]?.checks).toEqual([
+      { label: 'limite de chamadas', passed: true },
       { label: 'até 2 por visitante', passed: true },
       { label: 'dia até 70%', passed: false },
     ])

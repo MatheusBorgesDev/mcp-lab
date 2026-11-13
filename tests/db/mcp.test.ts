@@ -19,7 +19,12 @@ afterAll(() => sql.end())
 
 const NOW = new Date('2030-01-06T12:00:00-03:00')
 const identifyVisitor = createVisitorIdentifier('test-salt-0123456789abcdef')
-const handler = createMcpRequestHandler({ shop: createBarbershop({ sql, now: () => NOW }), events: async () => {}, identifyVisitor })
+const handler = createMcpRequestHandler({
+  shop: createBarbershop({ sql, now: () => NOW }),
+  events: async () => {},
+  identifyVisitor,
+  rateLimit: async () => ({ allowed: true }),
+})
 
 // Each client comes from its own address, so the per-visitor limit never links two tests.
 let clients = 0
@@ -149,6 +154,7 @@ describe('MCP server: failures', () => {
       shop: createBarbershop({ sql: unreachable, now: () => NOW }),
       events: async () => {},
       identifyVisitor,
+      rateLimit: async () => ({ allowed: true }),
     })
     const errors: unknown[] = []
     const originalError = console.error
@@ -302,6 +308,7 @@ describe('MCP server: inspector events', () => {
       await insertEvents(sql, rows)
     },
     identifyVisitor,
+    rateLimit: async () => ({ allowed: true }),
   })
   afterEach(async () => {
     if (requestIds.size > 0) await sql`delete from mcp_events where request_id in ${sql([...requestIds])}`
@@ -325,6 +332,7 @@ describe('MCP server: inspector events', () => {
     // The limits come last: they are checked again inside the write.
     expect(rows[1]?.detail.checks).toEqual(
       [
+        'rate_limit',
         'input',
         'service_exists',
         'on_slot_grid',

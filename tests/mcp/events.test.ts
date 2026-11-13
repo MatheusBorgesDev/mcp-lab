@@ -24,6 +24,7 @@ async function connect({ era = 'modern', name = 'test-client', userAgent, events
     shop,
     events: events ?? (async (rows) => void batches.push(rows)),
     identifyVisitor: () => ({ key: 'test-visitor', shared: false }),
+    rateLimit: async () => ({ allowed: true }),
   })
   const client = new Client(
     { name, version: '1.0.0' },
@@ -51,7 +52,7 @@ describe('MCP server: inspector events', () => {
     expect(rows.map((r) => r.step)).toEqual(['received', 'validated', 'processed', 'responded'])
     expect(rows.map((r) => r.detail)).toEqual([
       { args: {} },
-      { checks: [{ rule: 'input', passed: true }] },
+      { checks: [{ rule: 'rate_limit', passed: true }, { rule: 'input', passed: true }] },
       { kind: 'services', count: 1 },
       { is_error: false },
     ])
@@ -100,7 +101,12 @@ describe('MCP server: inspector events', () => {
     const rows = batches[0] ?? []
     expect(rows.map((r) => r.step)).toEqual(['received', 'validated', 'responded'])
     expect(rows[0]?.detail).toEqual({ args: { service_id: 'barba', date: '•••' } })
-    expect(rows[1]?.detail).toEqual({ checks: [{ rule: 'input', passed: false }] })
+    expect(rows[1]?.detail).toEqual({
+      checks: [
+        { rule: 'rate_limit', passed: true },
+        { rule: 'input', passed: false },
+      ],
+    })
     expect(rows[2]?.detail).toEqual({ is_error: true, code: 'INVALID_INPUT' })
   })
 
@@ -112,6 +118,7 @@ describe('MCP server: inspector events', () => {
       shop: broken,
       events: async (rows) => void batches.push(rows),
       identifyVisitor: () => ({ key: 'test-visitor', shared: false }),
+      rateLimit: async () => ({ allowed: true }),
     })
     const client = new Client({ name: 'test-client', version: '1.0.0' }, { versionNegotiation: { mode: { pin: '2026-07-28' } } })
     await client.connect(

@@ -17,8 +17,8 @@ export type EventRow = {
   createdAt: Date
 }
 
-/** "input" is the tool's own schema validation; the other rules come from the domain. */
-export type CheckResult = { rule: CheckRule | 'input'; passed: boolean }
+/** "rate_limit" and "input" are checked by the MCP layer before the tool runs; the other rules come from the domain. */
+export type CheckResult = { rule: CheckRule | 'rate_limit' | 'input'; passed: boolean }
 
 export type Trace = {
   checked(checks: readonly CheckResult[]): void

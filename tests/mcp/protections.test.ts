@@ -3,7 +3,10 @@ import { describe, expect, it } from 'vitest'
 import type { Barbershop, BookInput } from '../../server/app/barbershop.js'
 import { fail, ok } from '../../server/domain/result.js'
 import { SHOP_RULES } from '../../server/domain/rules.js'
+import type { EventRow } from '../../server/events/trace.js'
 import { createMcpRequestHandler } from '../../server/mcp/server.js'
+import type { Visitor } from '../../server/security/ip.js'
+import type { CallKind, RateVerdict } from '../../server/security/rate-limit.js'
 
 // The protections at the MCP layer, without a database: the shop is a stub.
 const SERVICE = { id: 'barba', name: 'Barba', description: null, durationMin: 30, priceCents: 4000, active: true }
@@ -23,13 +26,14 @@ const handler = createMcpRequestHandler({
   shop,
   events: async () => {},
   identifyVisitor: (request) => ({ key: `key-of-${request?.headers.get('x-real-ip') ?? 'nobody'}`, shared: false }),
+  rateLimit: async () => ({ allowed: true }),
 })
 
-async function connect(ip: string): Promise<Client> {
+async function connect(ip: string, mcp = handler): Promise<Client> {
   const client = new Client({ name: 'test-client', version: '1.0.0' }, { versionNegotiation: { mode: { pin: '2026-07-28' } } })
   await client.connect(
     new StreamableHTTPClientTransport(new URL('http://barber.test/mcp'), {
-      fetch: (url, init) => handler(new Request(url, init)),
+      fetch: (url, init) => mcp(new Request(url, init)),
       requestInit: { headers: { 'x-real-ip': ip } },
     }),
   )
@@ -69,5 +73,72 @@ describe('MCP server: protections', () => {
     )
 
     expect(response.status).toBe(413)
+  })
+})
+
+describe('MCP server: rate limit', () => {
+  function limitedTo(verdict: RateVerdict) {
+    const limited: Array<{ visitor: Visitor; kind: CallKind }> = []
+    const batches: EventRow[][] = []
+    const mcp = createMcpRequestHandler({
+      shop,
+      events: async (rows) => void batches.push(rows),
+      identifyVisitor: (request) => ({ key: `key-of-${request?.headers.get('x-real-ip') ?? 'nobody'}`, shared: false }),
+      rateLimit: async (visitor, kind) => {
+        limited.push({ visitor, kind })
+        return verdict
+      },
+    })
+    return { mcp, limited, batches }
+  }
+
+  it('counts tool calls, as reads or writes, and not the handshake', async () => {
+    const { mcp, limited } = limitedTo({ allowed: true })
+    const client = await connect('203.0.113.9', mcp)
+    await client.listTools()
+    expect(limited).toEqual([])
+
+    await client.callTool({ name: 'check_availability', arguments: { service_id: 'barba', date: '2030-01-07' } })
+    await client.callTool({ name: 'book_appointment', arguments: { service_id: 'barba', start: '2030-01-07T10:00:00-03:00' } })
+
+    const visitor = { key: 'key-of-203.0.113.9', shared: false }
+    expect(limited).toEqual([
+      { visitor, kind: 'read' },
+      { visitor, kind: 'write' },
+    ])
+  })
+
+  it('refuses a call over the limit and tells the AI how long to wait, without running the tool', async () => {
+    const { mcp } = limitedTo({ allowed: false, retryAfterSec: 42, firstRefusal: true })
+    const client = await connect('203.0.113.9', mcp)
+    const before = booked.length
+
+    const result = await client.callTool({
+      name: 'book_appointment',
+      arguments: { service_id: 'barba', start: '2030-01-07T10:00:00-03:00' },
+    })
+
+    expect(result).toMatchObject({ isError: true, structuredContent: { code: 'RATE_LIMITED', retry_after_seconds: 42 } })
+    const text = (result.content as Array<{ type: string; text?: string }>).map((c) => c.text ?? '').join('\n')
+    expect(text).toMatch(/42 seconds/)
+    expect(booked).toHaveLength(before)
+  })
+
+  it('shows the first refusal of a window in the inspector, and no other', async () => {
+    const first = limitedTo({ allowed: false, retryAfterSec: 42, firstRefusal: true })
+    await (await connect('203.0.113.9', first.mcp)).callTool({ name: 'list_services', arguments: {} })
+
+    expect(first.batches.map((rows) => rows.map((r) => [r.step, r.detail]))).toEqual([
+      [
+        ['received', { args: {} }],
+        ['validated', { checks: [{ rule: 'rate_limit', passed: false }] }],
+        ['processed', { kind: 'refused', code: 'RATE_LIMITED' }],
+        ['responded', { is_error: true, code: 'RATE_LIMITED' }],
+      ],
+    ])
+
+    const later = limitedTo({ allowed: false, retryAfterSec: 41, firstRefusal: false })
+    await (await connect('203.0.113.9', later.mcp)).callTool({ name: 'list_services', arguments: {} })
+    expect(later.batches).toEqual([])
   })
 })

@@ -24,6 +24,7 @@ const LABEL: Record<Step, string> = {
 }
 
 const RULE: Record<string, string> = {
+  rate_limit: 'limite de chamadas',
   input: 'entrada válida',
   appointment_exists: 'código existe',
   change_window: 'até 2 h antes',

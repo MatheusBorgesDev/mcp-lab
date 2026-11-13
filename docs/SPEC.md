@@ -228,7 +228,7 @@ Como os eventos são gravados (fase 2):
 ## 8. Segurança
 
 - Validação estrita de toda entrada (zod), com limites de tamanho e de formato.
-- Rate limit por IP, guardado no Redis (valor inicial: 30 chamadas por minuto e 10 escritas por hora).
+- Rate limit por IP, guardado no Redis, contando chamadas de tool (não o handshake): 30 chamadas por minuto e 10 escritas por hora; IPs de plataformas de IA (seção 2), que representam muitos visitantes, 120 chamadas por minuto e 40 escritas por hora. A recusa (`RATE_LIMITED`) diz em quantos segundos tentar de novo; o inspector mostra só a primeira recusa de cada IP por janela. Redis fora do ar ou lento (mais de 1 s): a chamada passa e o servidor registra no log; os limites de negócio continuam no Postgres.
 - Limites de negócio: 2 reservas ativas por IP (exceto IPs de plataformas de IA, seção 2) e teto de 70% de ocupação diária (somando visitantes e reservas fictícias; sempre sobram 30% livres para o próximo visitante), verificados no Postgres.
 - IP armazenado apenas como hash com salt secreto, e só para os limites.
 - Código de reserva armazenado só como hash.
@@ -246,7 +246,7 @@ Nunca no repositório. Localmente em `.env.local` (ignorado pelo git); em produ�
 |---|---|---|
 | `DATABASE_URL` | servidor | 1 (local: Supabase local, sem segredo; produção: pooler em modo transaction) |
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` | front (pública por design, protegida pelo RLS) | 2 |
-| Variáveis do Redis criadas pela integração da Upstash | servidor | 3 |
+| `KV_REST_API_URL`, `KV_REST_API_TOKEN` (criadas pela integração da Upstash; o servidor recusa rodar na Vercel sem elas) | servidor | 3 |
 | `IP_HASH_SALT`, `CRON_SECRET` | servidor | 3 |
 
 O `watch_url` usa a variável de sistema `VERCEL_PROJECT_PRODUCTION_URL`, que a Vercel injeta sozinha.
