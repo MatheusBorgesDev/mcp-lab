@@ -30,6 +30,17 @@ describe('clientLabel', () => {
     expect(clientLabel({ clientInfo: { name: 'cursor-vscode' }, userAgent: 'openai-mcp/1.0.0' })).toBe('Cursor')
   })
 
+  // What production received from claude.ai (14/11/2026): it calls with Claude Code's MCP client.
+  const claudeCode = { name: 'claude-code', title: 'Claude Code' }
+
+  it('names claude.ai by its User-Agent, although it declares the Claude Code client', () => {
+    expect(clientLabel({ clientInfo: claudeCode, userAgent: 'Claude-User' })).toBe('Claude')
+  })
+
+  it('keeps Claude Code, which sends its own User-Agent', () => {
+    expect(clientLabel({ clientInfo: claudeCode, userAgent: 'claude-code/2.1.323 (cli)' })).toBe('Claude Code')
+  })
+
   it.each([
     [{ clientInfo: { name: 'my-own-client' } }],
     [{ clientInfo: { name: 'Fulano de Tal 11 99999-0000' } }],

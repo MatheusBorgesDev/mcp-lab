@@ -89,17 +89,17 @@ function defineTool<S extends z.ZodType>(
   }
 
   server.registerTool(name, { ...config, inputSchema: advertise(schema) }, async (args: unknown, ctx: ServerContext) => {
-    const hints = {
-      // A per-request server: the SDK fills it from the request's _meta envelope (2026-07-28 clients).
-      clientInfo: server.server.getClientVersion(),
-      userAgent: ctx.http?.req?.headers.get('user-agent'),
-    }
-    const visitor = identifyVisitor(ctx.http?.req)
-    // TEMPORARY (phase 3, step 6): what each client declares, to fix the label of claude.ai's calls. No address,
-    // only whether it is an AI platform's. Remove once the label is fixed.
-    console.info('[mcp] client hints', JSON.stringify({ ...hints, platform: visitor.shared }))
-    const trace = startTrace({ requestId: randomUUID(), toolName: name, args, clientLabel: clientLabel(hints) })
-    const verdict = await rateLimit(visitor, kind)
+    const trace = startTrace({
+      requestId: randomUUID(),
+      toolName: name,
+      args,
+      clientLabel: clientLabel({
+        // A per-request server: the SDK fills it from the request's _meta envelope (2026-07-28 clients).
+        clientInfo: server.server.getClientVersion(),
+        userAgent: ctx.http?.req?.headers.get('user-agent'),
+      }),
+    })
+    const verdict = await rateLimit(identifyVisitor(ctx.http?.req), kind)
     trace.checked([{ rule: 'rate_limit', passed: verdict.allowed }])
     if (!verdict.allowed) {
       const refused = rateLimited(verdict.retryAfterSec)

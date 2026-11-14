@@ -185,7 +185,8 @@ professional or the whole shop.
 - The booking code is a bearer token: whoever has it controls the booking. That is the trade-off of having no
   login.
 - The client name in the inspector is self-declared: it is shown only as a label, for a known list of clients,
-  and never used for any decision.
+  and never used for any decision. claude.ai calls with Claude Code's MCP client and declares "Claude Code";
+  its `Claude-User` User-Agent is what labels it "Claude".
 - The handshake, listings and resource reads are not rate limited. They read only public data, the same the page
   reads from Supabase.
 
