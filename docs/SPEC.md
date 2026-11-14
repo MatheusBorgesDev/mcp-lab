@@ -18,7 +18,7 @@ Objetivos:
 - **Agenda compartilhada**: todos os visitantes veem e disputam os mesmos horários.
 - **Sem chat embutido**: o visitante usa a própria IA. O projeto não paga inferência de LLM.
 - **Sem login**: a posse de uma reserva é dada pelo **código de reserva** (aleatório, impossível de adivinhar).
-- **Idioma**: conteúdo da barbearia e página pública em pt-BR (serviços, preços em R$, `salon://info`). A camada que a IA lê fica em inglês: descrições das tools, `instructions` do servidor e `message` dos erros. Identificadores de código sempre em inglês. A IA do visitante responde no idioma dele de qualquer forma.
+- **Idioma**: conteúdo da barbearia e página pública em pt-BR (serviços, preços em R$, `salon://info` e o prompt `agendar_horario`, que o visitante escolhe num menu e é enviado em nome dele). A camada que a IA lê fica em inglês: descrições das tools, `instructions` do servidor e `message` dos erros. Identificadores de código sempre em inglês. A IA do visitante responde no idioma dele de qualquer forma.
 - **Stack**:
   - Front: Vite + React + TypeScript (SPA, sem SSR).
   - Backend: Vercel Functions (Node 22) no mesmo repositório, pasta `/api`, com a assinatura Web padrão (`export default { fetch }`). Código do servidor usa imports relativos: as funções da Vercel não aceitam path aliases do tsconfig.
@@ -199,6 +199,12 @@ As mensagens nunca expõem detalhes internos (SQL, stack trace).
 
 - Resource `salon://info`: endereço fictício, horário de funcionamento e políticas (cancelamento, antecedência).
 - Prompt `agendar_horario` (argumento opcional: serviço): conduz a conversa de agendamento.
+
+Como funcionam (fase 3):
+
+- `salon://info` é Markdown montado a cada leitura: o horário de cada dia da semana vem do banco (do primeiro início ao último fim dos profissionais ativos) e as políticas, de `rules.ts`. O texto nunca diverge do que as tools aplicam. Falha ao ler (banco fora do ar) responde erro genérico; o detalhe vai só para o log.
+- A leitura do resource não conta no rate limit (seção 8 conta chamadas de tool): lê os mesmos dados públicos que a página já lê direto do Supabase.
+- `agendar_horario` devolve uma mensagem do usuário: o pedido (com o serviço, se veio) e os passos que a IA deve seguir (consultar serviços e disponibilidade, resumir e esperar o ok antes de reservar, mostrar o código e o link da agenda). O serviço é texto livre de até 80 caracteres; vazio vale como ausente.
 
 ## 6. Inspector ao vivo
 

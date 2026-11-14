@@ -1,6 +1,8 @@
 import { createMcpHandler } from 'mcp-handler'
 import { limitBody } from '../security/body-limit.js'
 import { INSTRUCTIONS } from './instructions.js'
+import { registerPrompts } from './prompts.js'
+import { registerResources } from './resources.js'
 import { registerReadTools, registerWriteTools, type ToolDeps } from './tools.js'
 
 /**
@@ -12,6 +14,8 @@ export function createMcpRequestHandler(deps: ToolDeps): (request: Request) => P
     (server) => {
       registerReadTools(server, deps)
       registerWriteTools(server, deps)
+      registerResources(server, deps)
+      registerPrompts(server)
     },
     {
       serverInfo: { name: 'mcp-barber-shop', version: '0.1.0' },

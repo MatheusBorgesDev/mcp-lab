@@ -38,7 +38,7 @@ export type ToolDeps = {
  * The log line for an unexpected error: stack (type and message first) and code. Not the error's other
  * properties, which may hold secrets: Node's URL errors, for one, carry the whole connection string.
  */
-function describeError(error: unknown): string {
+export function describeError(error: unknown): string {
   if (!(error instanceof Error)) return `non-Error value thrown (${typeof error})`
   const code = (error as { code?: unknown }).code
   return `${error.stack ?? `${error.name}: ${error.message}`}${typeof code === 'string' ? ` [code ${code}]` : ''}`
@@ -281,14 +281,18 @@ export function registerReadTools(server: McpServer, deps: ToolDeps): void {
 }
 
 /**
- * Link to the public page with the appointment highlighted. In production, Vercel's own variable gives the
- * stable domain; elsewhere (pnpm dev, tests) the origin of the request is used.
+ * Origin of the public page. In production, Vercel's own variable gives the stable domain; elsewhere (pnpm dev,
+ * tests) the origin of the request is used.
  */
-function watchUrl(appointmentId: string, ctx: ServerContext): string {
+export function publicOrigin(ctx: ServerContext): string {
   const productionHost = process.env.VERCEL_PROJECT_PRODUCTION_URL
   const request = ctx.http?.req
-  const origin = productionHost ? `https://${productionHost}` : request ? getPublicOrigin(request) : 'http://localhost:5173'
-  return `${origin}/?appointment=${encodeURIComponent(appointmentId)}`
+  return productionHost ? `https://${productionHost}` : request ? getPublicOrigin(request) : 'http://localhost:5173'
+}
+
+/** Link to the public page with the appointment highlighted. */
+function watchUrl(appointmentId: string, ctx: ServerContext): string {
+  return `${publicOrigin(ctx)}/?appointment=${encodeURIComponent(appointmentId)}`
 }
 
 export function registerWriteTools(server: McpServer, deps: ToolDeps): void {

@@ -15,4 +15,7 @@ export const SHOP_RULES = {
   seedOccupancyPercent: 30,
 } as const
 
-export type ShopRules = typeof SHOP_RULES
+/** The rules' shape, numbers widened: tests and callers can pass other values than the shop's. */
+export type ShopRules = {
+  readonly [K in keyof typeof SHOP_RULES]: (typeof SHOP_RULES)[K] extends number ? number : (typeof SHOP_RULES)[K]
+}
