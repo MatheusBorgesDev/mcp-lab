@@ -20,6 +20,15 @@ export function createMcpRequestHandler(deps: ToolDeps): (request: Request) => P
     {
       serverInfo: { name: 'mcp-barber-shop', version: '0.1.0' },
       instructions: INSTRUCTIONS,
+      // The lists never change, so there is nothing to notify: without listChanged a client opens no
+      // subscriptions/listen stream. On Vercel such a stream lives until the 300 s timeout.
+      capabilities: {
+        tools: { listChanged: false },
+        resources: { listChanged: false },
+        prompts: { listChanged: false },
+      },
+      // A client that subscribes anyway gets a refusal, not a stream (the SDK would hold one with an empty filter).
+      maxSubscriptions: 0,
     },
   )
   // Oversized bodies are refused before the SDK parses them.

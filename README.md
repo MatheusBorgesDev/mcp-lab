@@ -168,6 +168,7 @@ professional or the whole shop.
 | Beating the limits with parallel requests | Advisory locks in a fixed order (visitor, day, professional) in the booking's transaction, with race tests against a real database. |
 | One visitor filling the agenda | 2 active bookings per visitor, 10 writes per hour, and each day closes to visitors at 70%. |
 | Call flooding | 30 tool calls per minute per address (120 for AI platforms), counted in Redis; bodies over 64 KB get 413. IPv6 addresses count per /64 network. |
+| Holding requests open | No request waits on the client: the server promises no list changes and refuses `subscriptions/listen`, so no stream stays open until Vercel's 300 s limit; GET and DELETE get 405 (stateless). |
 | Spoofing the visitor's address | Only the Vercel proxy's headers are trusted, which Vercel overwrites on every request. |
 | Reading private data from the page | RLS and grants: `anon` reads only the catalog, closures, inspector events and the `public_agenda` view; `authenticated` gets nothing. No free text typed by a visitor is ever shown publicly. |
 | Exposing visitors in the inspector | Arguments pass only when they match the format the tool expects (ids, dates, times); anything else shows as `•••`. The name is dropped, the code masked, the IP never stored: only an HMAC-SHA256 of it with a secret salt, used for the limits. |

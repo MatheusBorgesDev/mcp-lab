@@ -76,6 +76,27 @@ describe('MCP server: protections', () => {
   })
 })
 
+// A subscription stream stays open until the client leaves, and on Vercel a request lives at most 300 s: claude.ai
+// kept one open per conversation, each ending in a timeout. The lists never change, so there is nothing to stream.
+describe('MCP server: no subscription streams', () => {
+  it('promises no list changes, so clients do not subscribe to them', async () => {
+    const client = await connect('203.0.113.9')
+
+    const capabilities = client.getServerCapabilities()
+    expect(capabilities?.tools?.listChanged).toBe(false)
+    expect(capabilities?.resources?.listChanged).toBe(false)
+    expect(capabilities?.prompts?.listChanged).toBe(false)
+    await client.close()
+  })
+
+  it('refuses a subscription instead of holding a stream open', async () => {
+    const client = await connect('203.0.113.9')
+
+    await expect(client.listen({ toolsListChanged: true })).rejects.toThrow()
+    await client.close()
+  })
+})
+
 describe('MCP server: rate limit', () => {
   function limitedTo(verdict: RateVerdict) {
     const limited: Array<{ visitor: Visitor; kind: CallKind }> = []
