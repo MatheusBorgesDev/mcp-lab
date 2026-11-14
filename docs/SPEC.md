@@ -321,7 +321,7 @@ vercel.json
 - [x] Rate limit e limites de negócio
 - [x] Cron diário
 - [x] Resource e prompt do MCP
-- [ ] README com arquitetura, decisões e ameaças consideradas
+- [x] README com arquitetura, decisões e ameaças consideradas
 
 ## 13. Decisões em aberto
 
