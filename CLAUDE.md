@@ -22,6 +22,7 @@ Projeto de portfólio: servidor MCP de agendamento de uma barbearia fictícia, a
 - O front nunca escreve no banco. Toda escrita passa pelas funções do servidor, pela conexão Postgres do servidor (`DATABASE_URL`).
 - Nenhum segredo no front ou no repositório: apenas variáveis de ambiente.
 - Nada que identifique o visitante (IP, nome, código de reserva completo) aparece em telas públicas ou no inspector.
+- Handler de resource ou prompt que pode falhar captura o erro, registra no log e lança `ProtocolError` genérico: o SDK manda a `message` do erro ao cliente (ver `server/mcp/resources.ts`). Tools já respondem `INTERNAL_ERROR`.
 - Idioma: conteúdo da barbearia e página em pt-BR; descrições das tools, `instructions` e mensagens de erro em inglês; identificadores de código em inglês.
 - Código do servidor (`/api`, `/server`, `/tests`, `/dev`) usa imports relativos com extensão `.js` (resolução NodeNext; Vite e Vitest resolvem para o `.ts`). As funções da Vercel não aceitam path aliases do tsconfig.
 - Toda função em `/api` exporta a assinatura Web: `export default { fetch(request) { ... } }`.
