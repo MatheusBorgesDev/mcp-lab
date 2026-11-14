@@ -313,7 +313,7 @@ vercel.json
 
 ### Fase 3: Proteções e acabamento
 - [x] Rate limit e limites de negócio
-- [ ] Cron diário
+- [x] Cron diário
 - [ ] Resource e prompt do MCP
 - [ ] README com arquitetura, decisões e ameaças consideradas
 
