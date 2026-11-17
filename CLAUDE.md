@@ -12,6 +12,18 @@ Projeto de portfólio: servidor MCP de agendamento de uma barbearia fictícia, a
 - As versões de `mcp-handler`, `@modelcontextprotocol/server` e `zod` estão fixadas (ver SPEC, seção 2). Antes de atualizar qualquer uma, confirme a compatibilidade entre as três.
 - Repositório pessoal: os commits usam o e-mail noreply do GitHub configurado no próprio repositório. Confira `git config user.email` antes do primeiro commit numa cópia nova.
 
+## Fonte da verdade e fechamento de sessão
+
+O material durável sobre este projeto (resumo, decisões, números, autoria) e o material de carreira ligado a ele ficam numa pasta do Google Drive, fora deste repositório. O Claude não acessa essa pasta: a ponte é manual. Quem mantém o projeto traz o que for preciso, e o Claude devolve arquivos Markdown completos, prontos para subir. Nada durável fica só na conversa.
+
+- **Início da sessão:** antes da primeira tarefa, perguntar se há atualização do Drive para trazer (o resumo do projeto, `13-projeto-mcp-barber-shop.md`, o `estudo.md` ou outro arquivo ligado à tarefa).
+- **Fim de uma sessão que mudou algo durável** (deploy, decisão, regra, número medido, problema conhecido, autoria), entregar:
+  1. a versão completa e atualizada do `13-projeto-mcp-barber-shop.md`, nunca um trecho ou um diff;
+  2. as pendências para portfólio, LinkedIn e currículo, uma por linha, no formato `artefato · o que mudar · por quê`, ou "nenhuma".
+- **Sessão de estudo** (perguntas de entrevista sobre o projeto, exercícios de quebrar de propósito): ao fim, entregar o `estudo.md` completo e atualizado, com o estado de cada tópico, a data e os pontos fracos. Exercício não vira commit, e o `git status` termina limpo.
+- **Conteúdo:** nada afirmado além do que o fato sustenta. O que não foi verificado na sessão fica marcado "a confirmar". Número só medido, com data e método, nunca estimado.
+- **Autoria:** a seção Autoria do `13` separa o que foi decisão de quem mantém o projeto, o que foi gerado pelo Claude e o que não dá para saber. Ela só muda com evidência: commit, mensagem da conversa ou arquivo.
+
 ## Convenções
 
 - TypeScript em modo strict em todo o projeto.
