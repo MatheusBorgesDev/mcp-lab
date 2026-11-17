@@ -256,3 +256,7 @@ docs/SPEC.md      the full specification (in Portuguese)
 TypeScript (strict) · Node 22 · Vite 8 + React 19 · Vercel Functions and Cron · `mcp-handler` 2.3.1 +
 `@modelcontextprotocol/server` 2.4.0 + `zod` 4 · Supabase (Postgres + Realtime) with postgres.js · Upstash Redis ·
 Vitest + Testing Library · oxlint · pnpm.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
