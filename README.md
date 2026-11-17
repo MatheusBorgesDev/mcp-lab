@@ -1,5 +1,7 @@
 # MCP Barber Shop
 
+[![CI](https://github.com/MatheusBorgesDev/mcp-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/MatheusBorgesDev/mcp-lab/actions/workflows/ci.yml)
+
 A fictional barbershop whose booking system is a **remote MCP server**. Connect it to the AI you already use
 (Claude, ChatGPT, Cursor…), book a haircut by chatting, and watch it happen on a public page: the agenda is
 shared by every visitor and updates live, and an **inspector** shows each MCP call being received, validated,
@@ -231,7 +233,8 @@ pnpm test:db    # against the local Supabase
   and the helper refuses any database that is not local.
 - **Page**: the agenda, the inspector and the "try it" section, with Testing Library.
 
-Every protection was also broken on purpose to see its test fail.
+Every protection was also broken on purpose to see its test fail. CI (GitHub Actions) runs lint, the build and
+both suites on every push, the database suite against a local Supabase started in the runner.
 
 ## Project layout
 
@@ -256,6 +259,20 @@ docs/SPEC.md      the full specification (in Portuguese)
 TypeScript (strict) · Node 22 · Vite 8 + React 19 · Vercel Functions and Cron · `mcp-handler` 2.3.1 +
 `@modelcontextprotocol/server` 2.4.0 + `zod` 4 · Supabase (Postgres + Realtime) with postgres.js · Upstash Redis ·
 Vitest + Testing Library · oxlint · pnpm.
+
+## How it was built
+
+This project was built with [Claude Code](https://claude.com/claude-code), Anthropic's coding agent, under my
+direction. Every commit carries a `Co-Authored-By: Claude` line.
+
+- **Specification first.** I wrote the specification ([`docs/SPEC.md`](docs/SPEC.md)): the product, the business
+  rules, the data model and the phases.
+- **A plan per phase, approved before any code.** The agent proposed, and I decided. Some decisions went against
+  its recommendation, such as keeping the rate-limit counters in Redis instead of a Postgres table.
+- **Code and tests written by the agent, tests first.** Every protection was broken on purpose to see its test fail.
+- **Reviewed in use.** I tested each phase in production with claude.ai and ChatGPT. My questions and the logs I
+  brought back exposed a flaw in the daily occupancy cap and led to the production fixes, such as requests that
+  ended in a 300-second timeout.
 
 ## License
 
